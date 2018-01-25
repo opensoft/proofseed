@@ -1,9 +1,9 @@
-#include "spinlock_p.h"
+#include "spinlock.h"
 
 #include <QThread>
 
 static constexpr unsigned long SLEEP_MSECS = 1;
-static constexpr size_t ITERATIONS_COUNT = 10;
+static constexpr size_t ITERATIONS_COUNT = 64;
 
 namespace Proof {
 

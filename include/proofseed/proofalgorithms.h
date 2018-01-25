@@ -140,7 +140,8 @@ auto filter(const Container &container, const Predicate &predicate)
     return result;
 }
 
-template<typename Container, typename Predicate, class Result>
+//TODO: add overloads with no destination to create it with type of container
+template<typename Container, typename Predicate, typename Result>
 auto map(const Container &container, const Predicate &predicate, Result destination)
 -> decltype(__util::addToContainer(destination, predicate(*(container.cbegin()))),
             Result())
@@ -153,7 +154,7 @@ auto map(const Container &container, const Predicate &predicate, Result destinat
     return destination;
 }
 
-template<typename Container, typename Predicate, class Result>
+template<typename Container, typename Predicate, typename Result>
 auto map(const Container &container, const Predicate &predicate, Result destination)
 -> decltype(__util::addToContainer(destination, predicate(container.cbegin().key(), container.cbegin().value())),
             Result())

@@ -1,5 +1,5 @@
-#ifndef PROOF_SPINLOCK_P_H
-#define PROOF_SPINLOCK_P_H
+#ifndef PROOF_SPINLOCK_H
+#define PROOF_SPINLOCK_H
 
 #include "proofcore/proofcore_global.h"
 
@@ -22,4 +22,4 @@ private:
 
 } // namespace Proof
 
-#endif // PROOF_SPINLOCK_P_H
+#endif // PROOF_SPINLOCK_H
