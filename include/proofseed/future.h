@@ -10,12 +10,72 @@
 #include <QThread>
 #include <QString>
 #include <QLinkedList>
+#include <QTime>
 
 namespace Proof {
 //TODO: add Promise<void>, Future<void> if ever will be needed
 template<typename T> class Future;
 template<typename T> using FutureSP = QSharedPointer<Future<T>>;
 template<typename T> using FutureWP = QWeakPointer<Future<T>>;
+
+struct Failure
+{
+    enum Hints {
+        NoHint = 0x0,
+        UserFriendlyHint = 0x1,
+        CriticalHint = 0x2
+    };
+    Failure(const QString &message, long moduleCode, long errorCode, long hints = 0, const QVariant &data = QVariant())
+        : exists(true), moduleCode(moduleCode), errorCode(errorCode), hints(hints), message(message), data(data)
+    {}
+    Failure(const QVariant &data)
+        : exists(true), moduleCode(0), errorCode(0), hints(NoHint), message(QLatin1String()), data(data)
+    {}
+    Failure() : exists(false), moduleCode(0), errorCode(0), hints(NoHint) {}
+    operator QString() {return message;}
+    bool exists = false;
+    long moduleCode = 0;
+    long errorCode = 0;
+    long hints = 0;
+    QString message;
+    QVariant data;
+};
+
+namespace futures {
+namespace __util {
+bool hasLastFailure();
+Failure lastFailure();
+void resetLastFailure();
+void setLastFailure(Failure &&failure);
+void setLastFailure(const Failure &failure);
+}
+}
+
+//This helper struct is designed to be used only in next cases:
+//1. return clause of Future::map()/Future::reduce()
+//2. Promise::success argument
+//3. tasks::run() family
+//All other usages will lead to undefined behavior
+//Storing and/or casting to T/FutureSP<T> explicitly will lead to undefined behavior
+template<typename T, typename F = Failure> struct WithFailure
+{
+    WithFailure(const F &f) {m_failure = f;}
+    template<typename ...Args>
+    WithFailure(const Args &...args) {m_failure = F(args...);}
+    operator T()
+    {
+        futures::__util::setLastFailure(std::move(m_failure));
+        return T();
+    }
+    operator FutureSP<T>()
+    {
+        FutureSP<T> result = Future<T>::create();
+        result->fillFailure(std::move(m_failure));
+        return result;
+    }
+private:
+    Failure m_failure;
+};
 
 template<typename T>
 class Promise
@@ -33,7 +93,7 @@ public:
         return m_future;
     }
 
-    void failure(const QString &reason)
+    void failure(const Failure &reason)
     {
         m_future->fillFailure(reason);
     }
@@ -55,6 +115,7 @@ class Future
 {
     template<typename U> friend class Future;
     friend class Promise<T>;
+    friend class WithFailure<T>;
 public:
     Future(const Future<T> &) = delete;
     Future(Future<T> &&) = delete;
@@ -75,10 +136,19 @@ public:
         return m_completed && m_success;
     }
 
+    bool wait(long long timeout = -1) const
+    {
+        QTime timer;
+        timer.start();
+        while (!m_completed && (timeout < 0 || timer.elapsed() < timeout))
+            QThread::yieldCurrentThread();
+        return m_completed;
+    }
+
     T result() const
     {
-        while (!m_completed)
-            QThread::yieldCurrentThread();
+        if (!m_completed)
+            wait();
         if (m_success) {
             Q_ASSERT(m_result.has_value());
             return m_result.value();
@@ -86,11 +156,15 @@ public:
         return T();
     }
 
-    QString failureReason() const
+    Failure failureReason() const
     {
         while (!m_completed)
             QThread::yieldCurrentThread();
-        return m_success ? QLatin1String() : m_failureReason;
+        if (!m_success) {
+            Q_ASSERT(m_failureReason.has_value());
+            return m_failureReason.value();
+        }
+        return Failure();
     }
 
     template<typename Func>
@@ -113,9 +187,9 @@ public:
 
     template<typename Func>
     auto onFailure(Func &&f)
-    -> decltype(f(QString()), FutureSP<T>())
+    -> decltype(f(Failure()), FutureSP<T>())
     {
-        std::function<void(const QString&)> castedF = std::forward<Func>(f);
+        std::function<void(const Failure&)> castedF = std::forward<Func>(f);
         bool callIt = false;
         m_mainLock.lock();
         if (m_completed)
@@ -125,7 +199,7 @@ public:
         m_mainLock.unlock();
 
         if (callIt && !m_success)
-            castedF(m_failureReason);
+            castedF(failureReason());
         return m_weakSelf.toStrongRef();
     }
 
@@ -143,6 +217,7 @@ public:
         using U = decltype(f(T()));
         FutureSP<U> result = Future<U>::create();
         onSuccess([result, f = std::forward<Func>(f)](const T &v) { result->fillSuccess(f(v)); });
+        onFailure([result](const Failure &failure) { result->fillFailure(failure); });
         return result;
     }
 
@@ -152,7 +227,12 @@ public:
     {
         using U = decltype(f(T())->result());
         FutureSP<U> result = Future<U>::create();
-        onSuccess([result, f = std::forward<Func>(f)](const T &v) { f(v)->onSuccess([result](const U &v){ result->fillSuccess(v); }); });
+        onSuccess([result, f = std::forward<Func>(f)](const T &v) {
+            FutureSP<U> inner = f(v);
+            inner->onSuccess([result](const U &v){ result->fillSuccess(v); });
+            inner->onFailure([result](const Failure &failure) { result->fillFailure(failure); });
+        });
+        onFailure([result](const Failure &failure) { result->fillFailure(failure); });
         return result;
     }
 
@@ -162,6 +242,17 @@ public:
     {
         FutureSP<Result> result = Future<Result>::create();
         onSuccess([result, f = std::forward<Func>(f), acc](const T &v) { result->fillSuccess(algorithms::reduce(v, f, acc)); });
+        onFailure([result](const Failure &failure) { result->fillFailure(failure); });
+        return result;
+    }
+
+    template<typename Func>
+    auto recover(Func &&f)
+    -> decltype(f(Failure()), FutureSP<T>())
+    {
+        FutureSP<T> result = Future<T>::create();
+        onSuccess([result](const T &v) { result->fillSuccess(v); });
+        onFailure([result, f = std::forward<Func>(f)](const Failure &failure) { result->fillSuccess(f(failure)); });
         return result;
     }
 
@@ -196,8 +287,15 @@ private:
 
     void fillSuccess(const T &result)
     {
-        m_mainLock.lock();
         Q_ASSERT_X(!m_completed, "Future::fillSuccess", "Can't fill one future twice");
+        if (futures::__util::hasLastFailure()) {
+            auto failure = futures::__util::lastFailure();
+            futures::__util::resetLastFailure();
+            fillFailure(failure);
+            return;
+        }
+
+        m_mainLock.lock();
         m_result = result;
         m_success = true;
         m_completed = true;
@@ -206,10 +304,10 @@ private:
         m_mainLock.unlock();
     }
 
-    void fillFailure(const QString &reason)
+    void fillFailure(const Failure &reason)
     {
-        m_mainLock.lock();
         Q_ASSERT_X(!m_completed, "Future::fillFailure", "Can't fill one future twice");
+        m_mainLock.lock();
         m_failureReason = reason;
         m_success = false;
         m_completed = true;
@@ -235,7 +333,7 @@ private:
             }
         }
         (*current)->onSuccess(sequenceSuccessListenerGenerator(std::move(initial), current, std::forward<Container<T>>(result), promise));
-        (*current)->onFailure([promise](const QString &reason) {promise->failure(reason);});
+        (*current)->onFailure([promise](const Failure &reason) {promise->failure(reason);});
     }
 
     template<typename It, template<typename...> class Container>
@@ -254,11 +352,11 @@ private:
 
     std::atomic_bool m_completed {false};
     std::atomic_bool m_success {false};
-    QString m_failureReason;
     std::experimental::optional<T> m_result;
+    std::experimental::optional<Failure> m_failureReason;
 
     QLinkedList<std::function<void(const T&)>> m_successCallbacks;
-    QLinkedList<std::function<void(const QString&)>> m_failureCallbacks;
+    QLinkedList<std::function<void(const Failure&)>> m_failureCallbacks;
     SpinLock m_mainLock;
     FutureWP<T> m_weakSelf;
 };

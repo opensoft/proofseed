@@ -210,6 +210,9 @@ TEST(TasksTest, sequenceRun)
     EXPECT_EQ(capacity, runCounter);
     EXPECT_FALSE(future->completed());
     ready = true;
+    future->wait(1000);
+    ASSERT_TRUE(future->completed());
+    ASSERT_TRUE(future->succeeded());
     auto result = future->result();
     ASSERT_EQ(n, result.count());
     for (int i = 0; i < n; ++i)
@@ -322,12 +325,108 @@ TEST(TasksTest, signalWaiting)
     while (!ready);
     EXPECT_FALSE(future->completed());
     QMetaObject::invokeMethod(timer, "start", Qt::BlockingQueuedConnection, Q_ARG(int, 1));
-    QTime timeout;
-    timeout.start();
-    while (!future->completed() && timeout.elapsed() < 1000);
-    EXPECT_TRUE(future->completed());
+    future->wait(1000);
+    ASSERT_TRUE(future->completed());
     EXPECT_EQ(42, future->result());
     thread.quit();
     thread.wait(100);
     delete timer;
+}
+
+TEST(TasksTest, multipleTasksWithFailure)
+{
+    std::atomic_bool ready {false};
+    int n = 5;
+    QList<FutureSP<Result<int>>> results;
+    for (int i = 0; i < n; ++i) {
+        results << run([&ready, i]() -> Result<int> {
+            while (!ready);
+            if (i % 2)
+                return WithFailure<Result<int>>("failed", 0, 0);
+            else
+                return pairedResult(i * 2);
+        });
+    }
+    for (int i = 0; i < n; ++i)
+        EXPECT_FALSE(results[i]->completed());
+    ready = true;
+    for (int i = 0; i < n; ++i) {
+        results[i]->wait(1000);
+        ASSERT_TRUE(results[i]->completed()) << i;
+        if (i % 2) {
+            ASSERT_TRUE(results[i]->failed()) << i;
+            EXPECT_EQ("failed", results[i]->failureReason().message) << i;
+            EXPECT_EQ(0ull, results[i]->result().first) << i;
+            EXPECT_EQ(0, results[i]->result().second) << i;
+        } else {
+            ASSERT_TRUE(results[i]->succeeded()) << i;
+            auto result = results[i]->result();
+            EXPECT_NE(currentThread(), result.first) << i;
+            EXPECT_EQ(i * 2, result.second) << i;
+        }
+    }
+}
+
+TEST(TasksTest, sequenceRunWithFailure)
+{
+    std::atomic_bool ready {false};
+    QVector<int> input;
+    int n = 5;
+    for (int i = 0; i < n; ++i)
+        input << i;
+    FutureSP<QVector<int>> future = run(input, [&ready](int x) -> int {
+        while (!ready);
+        if (x == 3)
+            return WithFailure<int>("failed", 0, 0);
+        return x * 2;
+    });
+    ready = true;
+    future->wait(1000);
+    ASSERT_TRUE(future->completed());
+    ASSERT_TRUE(future->failed());
+    EXPECT_EQ("failed", future->failureReason().message);
+    EXPECT_EQ(0, future->result().count());
+}
+
+TEST(TasksTest, clusteredRunWithFailure)
+{
+    std::atomic_bool ready {false};
+    QVector<int> input;
+    int n = 20;
+    for (int i = 0; i < n; ++i)
+        input << i;
+    FutureSP<QVector<int>> future = clusteredRun(input, [&ready](int x) -> int {
+        while (!ready);
+        if (x == 3)
+            return WithFailure<int>("failed", 0, 0);
+        return x * 2;
+    }, 5);
+    ready = true;
+    future->wait(1000);
+    ASSERT_TRUE(future->completed());
+    ASSERT_TRUE(future->failed());
+    EXPECT_EQ("failed", future->failureReason().message);
+    EXPECT_EQ(0, future->result().count());
+}
+
+TEST(TasksTest, mappedTaskWithFailure)
+{
+    std::atomic_bool ready {false};
+    FutureSP<int> future = run([&ready]() {
+        while (!ready);
+        return 42;
+    });
+    FutureSP<int> mappedFuture = future->map([](int x) -> int {
+        return WithFailure<int>(x);
+    });
+    EXPECT_FALSE(future->completed());
+    ready = true;
+    mappedFuture->wait(1000);
+    ASSERT_TRUE(future->completed());
+    ASSERT_TRUE(future->succeeded());
+    EXPECT_EQ(42, future->result());
+    ASSERT_TRUE(mappedFuture->completed());
+    ASSERT_TRUE(mappedFuture->failed());
+    EXPECT_EQ(0, mappedFuture->result());
+    EXPECT_EQ(42, mappedFuture->failureReason().data);
 }

@@ -42,6 +42,7 @@ public:
     {
         PromiseSP<Result> promise = PromiseSP<Result>::create();
         std::function<void()> f = [promise, task = std::forward<Task>(task)]() {
+            Proof::futures::__util::resetLastFailure();
             promise->success(task());
         };
         insertTaskInfo(std::move(f), restrictionType, restrictor);
@@ -55,6 +56,7 @@ public:
     {
         PromiseSP<bool> promise = PromiseSP<bool>::create();
         std::function<void()> f = [promise, task = std::forward<Task>(task)]() {
+            Proof::futures::__util::resetLastFailure();
             task();
             promise->success(true);
         };
@@ -148,7 +150,11 @@ auto clusteredRun(const Container<Input> &data, Task &&task, qint64 minClusterSi
             });
         }
         for (const auto &future : futures)
-            future->result();
+            future->wait();
+        for (const auto &future : futures) {
+            if (future->failed())
+                return WithFailure<Container<Output>>(future->failureReason());
+        }
         return result;
     });
 }
