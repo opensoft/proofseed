@@ -3,6 +3,7 @@
 
 #include "proofcore/proofcore_global.h"
 #include "proofcore/future.h"
+#include "proofcore/helpers/zipper.h"
 #include "proofcore/proofalgorithms.h"
 
 #include "proofcore/3rdparty/optional.hpp"
@@ -37,13 +38,32 @@ public:
 
     template<typename Task,
              typename Result = typename std::result_of_t<Task()>,
-             typename = typename std::enable_if_t<!std::is_same<Result, void>::value>>
+             typename = typename std::enable_if_t<!std::is_same<Result, void>::value && !__util::IsSpecialization2<Result, QSharedPointer, Future>::value>>
     FutureSP<Result> run(Task &&task, RestrictionType restrictionType, const QString &restrictor)
     {
         PromiseSP<Result> promise = PromiseSP<Result>::create();
         std::function<void()> f = [promise, task = std::forward<Task>(task)]() {
             Proof::futures::__util::resetLastFailure();
             promise->success(task());
+        };
+        insertTaskInfo(std::move(f), restrictionType, restrictor);
+        return promise->future();
+    }
+
+    template<typename Task,
+             typename Result = typename std::result_of_t<Task()>,
+             typename InnerResult = typename std::decay<decltype(*Result().data())>::type::Value,
+             typename = typename std::enable_if_t<__util::IsSpecialization2<Result, QSharedPointer, Future>::value>>
+    Result run(Task &&task, RestrictionType restrictionType, const QString &restrictor)
+    {
+        PromiseSP<InnerResult> promise = PromiseSP<InnerResult>::create();
+        std::function<void()> f = [promise, task = std::forward<Task>(task)]() {
+            Proof::futures::__util::resetLastFailure();
+            task()->onSuccess([promise](const InnerResult &result) {
+                promise->success(result);
+            })->onFailure([promise](const Failure &failure) {
+                promise->failure(failure);
+            });
         };
         insertTaskInfo(std::move(f), restrictionType, restrictor);
         return promise->future();
@@ -115,6 +135,8 @@ template<template<typename...> class Container, typename Input, typename Task,
 FutureSP<Container<Output>> run(const Container<Input> &data, Task &&task,
                                 RestrictionType restrictionType = RestrictionType::Custom, const QString &restrictor = QString())
 {
+    if (!data.size())
+        return Future<Container<Output>>::successful(Container<Output>());
     Container<FutureSP<Output>> futures;
     futures.reserve(data.size());
     return Future<Output>::sequence(algorithms::map(data, [task = std::forward<Task>(task), restrictionType, restrictor](const Input &x) {
@@ -128,6 +150,8 @@ auto clusteredRun(const Container<Input> &data, Task &&task, qint64 minClusterSi
                   RestrictionType restrictionType = RestrictionType::Custom, const QString &restrictor = QString())
 -> decltype((Container<Output>()).resize(data.count()), FutureSP<Container<Output>>())
 {
+    if (!data.size())
+        return Future<Container<Output>>::successful(Container<Output>());
     if (minClusterSize <= 0)
         minClusterSize = 1;
 
@@ -153,7 +177,7 @@ auto clusteredRun(const Container<Input> &data, Task &&task, qint64 minClusterSi
             future->wait();
         for (const auto &future : futures) {
             if (future->failed())
-                return WithFailure<Container<Output>>(future->failureReason());
+                return WithFailure(future->failureReason());
         }
         return result;
     });

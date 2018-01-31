@@ -47,6 +47,37 @@ TEST(TasksTest, singleTask)
     EXPECT_EQ(42, result.second);
 }
 
+TEST(TasksTest, singleDeferredTask)
+{
+    PromiseSP<int> innerPromise = PromiseSP<int>::create();
+    FutureSP<int> result = run([innerPromise]() {
+        return innerPromise->future();
+    });
+    EXPECT_FALSE(result->completed());
+    innerPromise->success(42);
+    result->wait(1000);
+    ASSERT_TRUE(result->completed());
+    EXPECT_TRUE(result->succeeded());
+    EXPECT_FALSE(result->failed());
+    EXPECT_EQ(42, result->result());
+}
+
+TEST(TasksTest, singleDeferredTaskWithFailure)
+{
+    PromiseSP<int> innerPromise = PromiseSP<int>::create();
+    FutureSP<int> result = run([innerPromise]() {
+        return innerPromise->future();
+    });
+    EXPECT_FALSE(result->completed());
+    innerPromise->failure(Failure("failed", 0, 0));
+    result->wait(1000);
+    ASSERT_TRUE(result->completed());
+    EXPECT_FALSE(result->succeeded());
+    EXPECT_TRUE(result->failed());
+    EXPECT_EQ(0, result->result());
+    EXPECT_EQ("failed", result->failureReason().message);
+}
+
 TEST(TasksTest, multipleTasks)
 {
     std::atomic_bool ready {false};
@@ -219,6 +250,16 @@ TEST(TasksTest, sequenceRun)
         EXPECT_EQ(i * 2, result[i]);
 }
 
+TEST(TasksTest, emptySequenceRun)
+{
+    FutureSP<QVector<int>> future = run(QVector<int>(), [](int x){return x * 2;});
+    future->wait(1000);
+    ASSERT_TRUE(future->completed());
+    ASSERT_TRUE(future->succeeded());
+    auto result = future->result();
+    EXPECT_EQ(0, result.count());
+}
+
 TEST(TasksTest, clusteredRun)
 {
     std::atomic_bool ready {false};
@@ -257,6 +298,16 @@ TEST(TasksTest, clusteredRun)
     EXPECT_EQ(capacity, initialData.count());
     for (int i = 1; i < initialData.count(); ++i)
         EXPECT_LE(minClusterSize, initialData[i] - initialData[i - 1]);
+}
+
+TEST(TasksTest, emptyClusteredRun)
+{
+    FutureSP<QVector<int>> future = clusteredRun(QVector<int>(), [](int x){return x * 2;});
+    future->wait(1000);
+    ASSERT_TRUE(future->completed());
+    ASSERT_TRUE(future->succeeded());
+    auto result = future->result();
+    EXPECT_EQ(0, result.count());
 }
 
 TEST(TasksTest, clusteredRunWithExtraBigCluster)
@@ -342,7 +393,7 @@ TEST(TasksTest, multipleTasksWithFailure)
         results << run([&ready, i]() -> Result<int> {
             while (!ready);
             if (i % 2)
-                return WithFailure<Result<int>>("failed", 0, 0);
+                return WithFailure("failed", 0, 0);
             else
                 return pairedResult(i * 2);
         });
@@ -377,7 +428,7 @@ TEST(TasksTest, sequenceRunWithFailure)
     FutureSP<QVector<int>> future = run(input, [&ready](int x) -> int {
         while (!ready);
         if (x == 3)
-            return WithFailure<int>("failed", 0, 0);
+            return WithFailure("failed", 0, 0);
         return x * 2;
     });
     ready = true;
@@ -398,7 +449,7 @@ TEST(TasksTest, clusteredRunWithFailure)
     FutureSP<QVector<int>> future = clusteredRun(input, [&ready](int x) -> int {
         while (!ready);
         if (x == 3)
-            return WithFailure<int>("failed", 0, 0);
+            return WithFailure("failed", 0, 0);
         return x * 2;
     }, 5);
     ready = true;
@@ -417,7 +468,7 @@ TEST(TasksTest, mappedTaskWithFailure)
         return 42;
     });
     FutureSP<int> mappedFuture = future->map([](int x) -> int {
-        return WithFailure<int>(x);
+        return WithFailure(x);
     });
     EXPECT_FALSE(future->completed());
     ready = true;

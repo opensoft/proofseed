@@ -1,8 +1,11 @@
 #ifndef PROOF_FUTURE_H
 #define PROOF_FUTURE_H
 
+#include "proofcore/proofcore_global.h"
 #include "proofcore/spinlock.h"
 #include "proofcore/proofalgorithms.h"
+#include "proofcore/helpers/tuplemaker.h"
+#include "proofcore/helpers/zipper.h"
 
 //TODO: 1.0: think about switching to martinmoene or TartanLlama implementations
 #include "proofcore/3rdparty/optional.hpp"
@@ -43,11 +46,11 @@ struct Failure
 
 namespace futures {
 namespace __util {
-bool hasLastFailure();
-Failure lastFailure();
-void resetLastFailure();
-void setLastFailure(Failure &&failure);
-void setLastFailure(const Failure &failure);
+bool PROOF_CORE_EXPORT hasLastFailure();
+Failure PROOF_CORE_EXPORT lastFailure();
+void PROOF_CORE_EXPORT resetLastFailure();
+void PROOF_CORE_EXPORT setLastFailure(Failure &&failure);
+void PROOF_CORE_EXPORT setLastFailure(const Failure &failure);
 }
 }
 
@@ -57,17 +60,17 @@ void setLastFailure(const Failure &failure);
 //3. tasks::run() family
 //All other usages will lead to undefined behavior
 //Storing and/or casting to T/FutureSP<T> explicitly will lead to undefined behavior
-template<typename T, typename F = Failure> struct WithFailure
+struct WithFailure
 {
-    WithFailure(const F &f) {m_failure = f;}
+    WithFailure(const Failure &f) {m_failure = f;}
     template<typename ...Args>
-    WithFailure(const Args &...args) {m_failure = F(args...);}
-    operator T()
+    WithFailure(const Args &...args) {m_failure = Failure(args...);}
+    template<typename T> operator T()
     {
         futures::__util::setLastFailure(std::move(m_failure));
         return T();
     }
-    operator FutureSP<T>()
+    template<typename T> operator FutureSP<T>()
     {
         FutureSP<T> result = Future<T>::create();
         result->fillFailure(std::move(m_failure));
@@ -103,6 +106,11 @@ public:
         m_future->fillSuccess(result);
     }
 
+    void success(const T &result)
+    {
+        m_future->fillSuccess(result);
+    }
+
 private:
     FutureSP<T> m_future = Future<T>::create();
     std::atomic_bool m_filled {false};
@@ -115,8 +123,10 @@ class Future
 {
     template<typename U> friend class Future;
     friend class Promise<T>;
-    friend class WithFailure<T>;
+    friend struct WithFailure;
 public:
+    using Value = T;
+
     Future(const Future<T> &) = delete;
     Future(Future<T> &&) = delete;
     Future &operator=(const Future<T> &) = delete;
@@ -236,6 +246,21 @@ public:
         return result;
     }
 
+    template<typename Func>
+    auto andThen(Func &&f)
+    -> decltype(FutureSP<decltype(f()->result())>())
+    {
+        using U = decltype(f()->result());
+        FutureSP<U> result = Future<U>::create();
+        onSuccess([result, f = std::forward<Func>(f)](const T &) {
+            FutureSP<U> inner = f();
+            inner->onSuccess([result](const U &v){ result->fillSuccess(v); });
+            inner->onFailure([result](const Failure &failure) { result->fillFailure(failure); });
+        });
+        onFailure([result](const Failure &failure) { result->fillFailure(failure); });
+        return result;
+    }
+
     template<typename Func, typename Result>
     auto reduce(Func &&f, Result acc)
     -> decltype(FutureSP<Result>())
@@ -256,9 +281,60 @@ public:
         return result;
     }
 
-    //This methods were made non-template to restrict usage only to linear qt containers
+    template<typename Func>
+    auto recoverWith(Func &&f)
+    -> decltype(f(Failure())->result(), FutureSP<T>())
+    {
+        FutureSP<T> result = Future<T>::create();
+        onSuccess([result](const T &v) { result->fillSuccess(v); });
+        onFailure([result, f = std::forward<Func>(f)](const Failure &failure) {
+            FutureSP<T> inner = f(failure);
+            inner->onSuccess([result](const T &v){ result->fillSuccess(v); });
+            inner->onFailure([result](const Failure &failure) { result->fillFailure(failure); });
+        });
+        return result;
+    }
+
+    //TODO: think about better approach for zip. TupleMaker seems a bit sloppy
+    template<typename Head, typename ...Other,
+             typename ResultSP = typename __util::ZipperSP<std::true_type, FutureSP<T>, Head, Other...>::type,
+             typename Result = typename std::decay<decltype(*ResultSP().data())>::type::Value>
+    FutureSP<Result> zip(Head head, Other... other)
+    {
+        return flatMap([head, other...](const T &v) -> FutureSP<Result> {
+            return head->zip(other...)->map([v](const auto &argsResult) -> Result {
+                return std::tuple_cat(__util::TupleMaker<T>::result(v), argsResult);
+            });
+        });
+    }
+
+    static auto successful()
+    -> decltype(T(), FutureSP<T>())
+    {
+        FutureSP<T> result = create();
+        result->fillSuccess(T());
+        return result;
+    }
+
+    static FutureSP<T> successful(const T &value)
+    {
+        FutureSP<T> result = create();
+        result->fillSuccess(value);
+        return result;
+    }
+
+    static FutureSP<T> fail(const Failure &failure)
+    {
+        FutureSP<T> result = create();
+        result->fillFailure(failure);
+        return result;
+    }
+
+    //This method was made non-template to restrict usage only to linear qt containers because of container copying
     static FutureSP<QList<T>> sequence(QList<FutureSP<T>> container)
     {
+        if (container.isEmpty())
+            return Future<QList<T>>::successful();
         PromiseSP<QList<T>> promise = PromiseSP<QList<T>>::create();
         QList<T> result;
         result.reserve(container.count());
@@ -268,6 +344,8 @@ public:
 
     static FutureSP<QVector<T>> sequence(QVector<FutureSP<T>> container)
     {
+        if (container.isEmpty())
+            return Future<QVector<T>>::successful();
         PromiseSP<QVector<T>> promise = PromiseSP<QVector<T>>::create();
         QVector<T> result;
         result.reserve(container.count());
@@ -314,6 +392,11 @@ private:
         for (const auto &f : qAsConst(m_failureCallbacks))
             f(reason);
         m_mainLock.unlock();
+    }
+
+    auto zip() -> decltype(FutureSP<decltype(__util::TupleMaker<T>::result(T()))>())
+    {
+        return map([](const T &v) {return __util::TupleMaker<T>::result(v);});
     }
 
     template<typename It, template<typename...> class Container>
