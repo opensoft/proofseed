@@ -3,13 +3,14 @@
 
 #include <QThread>
 #include <QString>
-#include <QLinkedList>
-#include <QMap>
-#include <QVector>
-#include <QSet>
 #include <QMutex>
 #include <QWaitCondition>
 #include <QCoreApplication>
+
+#include <vector>
+#include <list>
+#include <set>
+#include <map>
 
 constexpr qint32 HTTP_CAPACITY = 6;
 static const qint32 INTENSIVE_CAPACITY = qMax(QThread::idealThreadCount(), 1);
@@ -39,18 +40,18 @@ class TasksDispatcherPrivate
     TasksDispatcher *q_ptr;
 public:
     void taskFinished(qint32 workerId, const TaskInfo &taskInfo);
-    QVector<Worker *> workers;
+    std::vector<Worker *> workers;
 
 private:
     void schedule(qint32 forcedWorkerId = -1); //should be always called under mainLock
 
-    QSet<QThread *> poolThreads;
-    QSet<qint32> waitingWorkers;
-    QLinkedList<TaskInfo> tasks;
-    QMap<RestrictionType, QMap<QString, qint32>> restrictorsUsage;
+    std::set<QThread *> poolThreads;
+    std::set<qint32> waitingWorkers;
+    std::list<TaskInfo> tasks;
+    std::map<RestrictionType, std::map<QString, qint32>> restrictorsUsage;
     SpinLock mainLock;
-    QMap<QString, qint32> customRestrictorsCapacity;
-    qint32 capacity = DEFAULT_TOTAL_CAPACITY;
+    std::map<QString, qint32> customRestrictorsCapacity;
+    quint32 capacity = DEFAULT_TOTAL_CAPACITY;
 
     static thread_local bool currentEventLoopStarted;
     static thread_local QSharedPointer<QEventLoop> signalWaitersEventLoop;
@@ -115,15 +116,16 @@ qint32 TasksDispatcher::restrictorCapacity(RestrictionType restrictionType, cons
     else if (restrictionType == RestrictionType::Http)
         return HTTP_CAPACITY;
     d_ptr->mainLock.lock();
-    qint32 result = d_ptr->customRestrictorsCapacity.value(restrictor, CUSTOM_CAPACITY);
+    auto resultIt = d_ptr->customRestrictorsCapacity.find(restrictor);
+    qint32 result = d_ptr->customRestrictorsCapacity.cend() == resultIt ? CUSTOM_CAPACITY : resultIt->second;
     d_ptr->mainLock.unlock();
     return result;
 }
 
-void TasksDispatcher::setCapacity(qint32 capacity)
+void TasksDispatcher::setCapacity(quint32 capacity)
 {
     d_ptr->mainLock.lock();
-    if (d_ptr->workers.count() <= capacity)
+    if (d_ptr->workers.size() <= capacity)
         d_ptr->capacity = capacity;
     d_ptr->mainLock.unlock();
 }
@@ -137,7 +139,7 @@ void TasksDispatcher::addCustomRestrictor(const QString &restrictor, qint32 capa
 
 void TasksDispatcher::fireSignalWaiters()
 {
-    Q_ASSERT_X(d_ptr->poolThreads.contains(QThread::currentThread()), "fireSignalWaiters", "signal waiters can't be used outside of tasks thread pool");
+    Q_ASSERT_X(d_ptr->poolThreads.count(QThread::currentThread()), "fireSignalWaiters", "signal waiters can't be used outside of tasks thread pool");
     qApp->processEvents();
     if (!d_ptr->signalWaitersEventLoop)
         return;
@@ -151,15 +153,15 @@ void TasksDispatcher::insertTaskInfo(std::function<void ()> &&wrappedTask, Restr
 {
     d_ptr->mainLock.lock();
     //We mimic all intensive tasks as under single restrictor
-    d_ptr->tasks << TaskInfo(std::move(wrappedTask), restrictionType,
-                             restrictionType == RestrictionType::Intensive ? QLatin1String("_") : restrictor);
+    d_ptr->tasks.push_back(TaskInfo(std::move(wrappedTask), restrictionType,
+                                    restrictionType == RestrictionType::Intensive ? QLatin1String("_") : restrictor));
     d_ptr->schedule();
     d_ptr->mainLock.unlock();
 }
 
 void TasksDispatcher::addSignalWaiterPrivate(std::function<void (const QSharedPointer<QEventLoop> &)> &&connector)
 {
-    Q_ASSERT_X(d_ptr->poolThreads.contains(QThread::currentThread()), "addSignalWaiterPrivate", "signal waiters can't be used outside of tasks thread pool");
+    Q_ASSERT_X(d_ptr->poolThreads.count(QThread::currentThread()), "addSignalWaiterPrivate", "signal waiters can't be used outside of tasks thread pool");
     if (!d_ptr->signalWaitersEventLoop) {
         d_ptr->currentEventLoopStarted = false;
         d_ptr->signalWaitersEventLoop.reset(new QEventLoop);
@@ -183,7 +185,7 @@ void TasksDispatcherPrivate::taskFinished(qint32 workerId, const TaskInfo &taskI
     mainLock.lock();
     waitingWorkers.insert(workerId);
     if (restrictorsUsage[taskInfo.restrictionType][taskInfo.restrictor] <= 1)
-        restrictorsUsage[taskInfo.restrictionType].remove(taskInfo.restrictor);
+        restrictorsUsage[taskInfo.restrictionType].erase(taskInfo.restrictor);
     else
         --restrictorsUsage[taskInfo.restrictionType][taskInfo.restrictor];
     schedule(workerId);
@@ -192,13 +194,13 @@ void TasksDispatcherPrivate::taskFinished(qint32 workerId, const TaskInfo &taskI
 
 void TasksDispatcherPrivate::schedule(qint32 forcedWorkerId)
 {
-    if (waitingWorkers.isEmpty()) {
-        if (workers.count() >= capacity)
+    if (waitingWorkers.empty()) {
+        if (workers.size() >= capacity)
             return;
-        waitingWorkers.insert(workers.count());
-        auto worker = new Worker(workers.count());
-        workers << worker;
-        poolThreads << worker;
+        waitingWorkers.insert(workers.size());
+        auto worker = new Worker(workers.size());
+        workers.push_back(worker);
+        poolThreads.insert(worker);
         worker->start();
     }
 
@@ -212,19 +214,23 @@ void TasksDispatcherPrivate::schedule(qint32 forcedWorkerId)
             case RestrictionType::Intensive:
                 capacityLeft = INTENSIVE_CAPACITY;
                 break;
-            case RestrictionType::Custom:
-                capacityLeft = customRestrictorsCapacity.value(it->restrictor, CUSTOM_CAPACITY);
+            case RestrictionType::Custom: {
+                auto resultIt = customRestrictorsCapacity.find(it->restrictor);
+                capacityLeft = customRestrictorsCapacity.cend() == resultIt ? CUSTOM_CAPACITY : resultIt->second;
                 break;
             }
-            capacityLeft -= restrictorsUsage[it->restrictionType].value(it->restrictor, 0);
+            }
+            auto resultIt = restrictorsUsage[it->restrictionType].find(it->restrictor);
+            capacityLeft -= restrictorsUsage[it->restrictionType].cend() == resultIt ? 0 : resultIt->second;
             if (capacityLeft <= 0)
                 continue;
             ++restrictorsUsage[it->restrictionType][it->restrictor];
         }
-        qint32 workerId = (forcedWorkerId >= 0 && waitingWorkers.contains(forcedWorkerId)) ? forcedWorkerId : *waitingWorkers.cbegin();
-        workers[workerId]->setNextTask(*it);
+        qint32 workerId = (forcedWorkerId >= 0 && waitingWorkers.count(forcedWorkerId)) ? forcedWorkerId : *waitingWorkers.cbegin();
+        auto task = *it;
         tasks.erase(it);
-        waitingWorkers.remove(workerId);
+        waitingWorkers.erase(workerId);
+        workers[workerId]->setNextTask(task);
         break;
     }
 }

@@ -12,8 +12,9 @@
 
 #include <QThread>
 #include <QString>
-#include <QLinkedList>
 #include <QTime>
+
+#include <list>
 
 namespace Proof {
 //TODO: add Promise<void>, Future<void> if ever will be needed
@@ -131,35 +132,36 @@ public:
     Future(Future<T> &&) = delete;
     Future &operator=(const Future<T> &) = delete;
     Future &operator=(Future<T> &&) = delete;
-    ~Future() {}
+    ~Future() = default;
 
     bool completed() const
     {
-        return m_completed;
+        int value = m_state.load(std::memory_order_acquire);
+        return value == FailedFuture || value == SucceededFuture;
     }
     bool failed() const
     {
-        return m_completed && !m_success;
+        return m_state.load(std::memory_order_acquire) == FailedFuture;
     }
     bool succeeded() const
     {
-        return m_completed && m_success;
+        return m_state.load(std::memory_order_acquire) == SucceededFuture;
     }
 
     bool wait(long long timeout = -1) const
     {
         QTime timer;
         timer.start();
-        while (!m_completed && (timeout < 0 || timer.elapsed() < timeout))
+        while (!completed() && (timeout < 0 || timer.elapsed() < timeout))
             QThread::yieldCurrentThread();
-        return m_completed;
+        return completed();
     }
 
     T result() const
     {
-        if (!m_completed)
+        if (!completed())
             wait();
-        if (m_success) {
+        if (succeeded()) {
             Q_ASSERT(m_result.has_value());
             return m_result.value();
         }
@@ -168,9 +170,9 @@ public:
 
     Failure failureReason() const
     {
-        while (!m_completed)
+        while (!completed())
             QThread::yieldCurrentThread();
-        if (!m_success) {
+        if (failed()) {
             Q_ASSERT(m_failureReason.has_value());
             return m_failureReason.value();
         }
@@ -181,17 +183,16 @@ public:
     auto onSuccess(Func &&f)
     -> decltype(f(T()), FutureSP<T>())
     {
-        std::function<void(const T&)> castedF = std::forward<Func>(f);
         bool callIt = false;
         m_mainLock.lock();
-        if (m_completed)
+        if (completed())
             callIt = true;
         else
-            m_successCallbacks << castedF;
+            m_successCallbacks.emplace_back(f);
         m_mainLock.unlock();
 
-        if (callIt && m_success)
-            castedF(m_result.value());
+        if (callIt && succeeded())
+            f(m_result.value());
         return m_weakSelf.toStrongRef();
     }
 
@@ -199,17 +200,16 @@ public:
     auto onFailure(Func &&f)
     -> decltype(f(Failure()), FutureSP<T>())
     {
-        std::function<void(const Failure&)> castedF = std::forward<Func>(f);
         bool callIt = false;
         m_mainLock.lock();
-        if (m_completed)
+        if (completed())
             callIt = true;
         else
-            m_failureCallbacks << castedF;
+            m_failureCallbacks.emplace_back(f);
         m_mainLock.unlock();
 
-        if (callIt && !m_success)
-            castedF(failureReason());
+        if (callIt && failed())
+            f(failureReason());
         return m_weakSelf.toStrongRef();
     }
 
@@ -365,7 +365,7 @@ private:
 
     void fillSuccess(const T &result)
     {
-        Q_ASSERT_X(!m_completed, "Future::fillSuccess", "Can't fill one future twice");
+        Q_ASSERT_X(!completed(), "Future::fillSuccess", "Can't fill one future twice");
         if (futures::__util::hasLastFailure()) {
             auto failure = futures::__util::lastFailure();
             futures::__util::resetLastFailure();
@@ -375,22 +375,24 @@ private:
 
         m_mainLock.lock();
         m_result = result;
-        m_success = true;
-        m_completed = true;
-        for (const auto &f : qAsConst(m_successCallbacks))
+        m_state.store(SucceededFuture, std::memory_order_release);
+        for (const auto &f : m_successCallbacks)
             f(result);
+        m_successCallbacks.clear();
+        m_failureCallbacks.clear();
         m_mainLock.unlock();
     }
 
     void fillFailure(const Failure &reason)
     {
-        Q_ASSERT_X(!m_completed, "Future::fillFailure", "Can't fill one future twice");
+        Q_ASSERT_X(!completed(), "Future::fillFailure", "Can't fill one future twice");
         m_mainLock.lock();
         m_failureReason = reason;
-        m_success = false;
-        m_completed = true;
-        for (const auto &f : qAsConst(m_failureCallbacks))
+        m_state.store(FailedFuture, std::memory_order_release);
+        for (const auto &f : m_failureCallbacks)
             f(reason);
+        m_successCallbacks.clear();
+        m_failureCallbacks.clear();
         m_mainLock.unlock();
     }
 
@@ -415,8 +417,9 @@ private:
                 return;
             }
         }
-        (*current)->onSuccess(sequenceSuccessListenerGenerator(std::move(initial), current, std::forward<Container<T>>(result), promise));
-        (*current)->onFailure([promise](const Failure &reason) {promise->failure(reason);});
+        auto currentFuture = *current;
+        currentFuture->onSuccess(sequenceSuccessListenerGenerator(std::move(initial), current, std::forward<Container<T>>(result), promise));
+        currentFuture->onFailure([promise](const Failure &reason) {promise->failure(reason);});
     }
 
     template<typename It, template<typename...> class Container>
@@ -433,13 +436,18 @@ private:
         };
     }
 
-    std::atomic_bool m_completed {false};
-    std::atomic_bool m_success {false};
+    enum State {
+        NotCompletedFuture = 0,
+        SucceededFuture = 1,
+        FailedFuture = 2
+    };
+
+    std::atomic_int m_state {NotCompletedFuture};
     std::experimental::optional<T> m_result;
     std::experimental::optional<Failure> m_failureReason;
 
-    QLinkedList<std::function<void(const T&)>> m_successCallbacks;
-    QLinkedList<std::function<void(const Failure&)>> m_failureCallbacks;
+    std::list<std::function<void(const T&)>> m_successCallbacks;
+    std::list<std::function<void(const Failure&)>> m_failureCallbacks;
     SpinLock m_mainLock;
     FutureWP<T> m_weakSelf;
 };
