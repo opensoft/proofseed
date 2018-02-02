@@ -11,7 +11,7 @@
 #include <QEventLoop>
 
 #include <type_traits>
-#include <math.h>
+#include <cmath>
 
 namespace Proof {
 namespace tasks {
@@ -30,6 +30,10 @@ class PROOF_CORE_EXPORT TasksDispatcher
     Q_DECLARE_PRIVATE(TasksDispatcher)
 public:
     static TasksDispatcher *instance();
+    TasksDispatcher(const TasksDispatcher &) = delete;
+    TasksDispatcher(const TasksDispatcher &&) = delete;
+    TasksDispatcher operator=(const TasksDispatcher &) = delete;
+    TasksDispatcher operator=(const TasksDispatcher &&) = delete;
 
     qint32 capacity() const;
     qint32 restrictorCapacity(RestrictionType restrictionType, const QString &restrictor = QLatin1String()) const;

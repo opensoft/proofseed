@@ -32,7 +32,7 @@ struct Failure
     Failure(const QString &message, long moduleCode, long errorCode, long hints = 0, const QVariant &data = QVariant())
         : exists(true), moduleCode(moduleCode), errorCode(errorCode), hints(hints), message(message), data(data)
     {}
-    Failure(const QVariant &data)
+    explicit Failure(const QVariant &data)
         : exists(true), moduleCode(0), errorCode(0), hints(NoHint), message(QLatin1String()), data(data)
     {}
     Failure() : exists(false), moduleCode(0), errorCode(0), hints(NoHint) {}
@@ -63,9 +63,9 @@ void PROOF_CORE_EXPORT setLastFailure(const Failure &failure);
 //Storing and/or casting to T/FutureSP<T> explicitly will lead to undefined behavior
 struct WithFailure
 {
-    WithFailure(const Failure &f) {m_failure = f;}
+    explicit WithFailure(const Failure &f) {m_failure = f;}
     template<typename ...Args>
-    WithFailure(const Args &...args) {m_failure = Failure(args...);}
+    explicit WithFailure(const Args &...args) {m_failure = Failure(args...);}
     template<typename T> operator T()
     {
         futures::__util::setLastFailure(std::move(m_failure));
@@ -97,6 +97,11 @@ public:
         return m_future;
     }
 
+    bool filled()
+    {
+        return m_future->completed();
+    }
+
     void failure(const Failure &reason)
     {
         m_future->fillFailure(reason);
@@ -114,7 +119,6 @@ public:
 
 private:
     FutureSP<T> m_future = Future<T>::create();
-    std::atomic_bool m_filled {false};
 };
 template<typename T> using PromiseSP = QSharedPointer<Promise<T>>;
 template<typename T> using PromiseWP = QWeakPointer<Promise<T>>;
@@ -217,7 +221,7 @@ public:
     auto forEach(Func &&f)
     -> decltype(f(T()), FutureSP<T>())
     {
-        return onSuccess(std::move(f));
+        return onSuccess(std::forward<Func>(f));
     }
 
     template<typename Func>

@@ -83,8 +83,12 @@ TEST(TasksTest, multipleTasks)
     std::atomic_bool ready {false};
     int n = 5;
     QList<FutureSP<Result<int>>> results;
-    for (int i = 0; i < n; ++i)
-        results << run([&ready, i](){while (!ready); return pairedResult(i * 2);});
+    for (int i = 0; i < n; ++i) {
+        results << run([&ready, i](){
+            while (!ready);
+            return pairedResult(i * 2);
+        });
+    }
     for (int i = 0; i < n; ++i)
         EXPECT_FALSE(results[i]->completed());
     ready = true;
@@ -104,8 +108,13 @@ TEST(TasksTest, multipleTasksOverCapacity)
     std::atomic_int runCounter {0};
     int n = TasksDispatcher::instance()->capacity() * 2;
     QList<FutureSP<int>> results;
-    for (int i = 0; i < n; ++i)
-        results << run([&ready, &runCounter, i](){++runCounter; while (!ready); return i * 2;});
+    for (int i = 0; i < n; ++i) {
+        results << run([&ready, &runCounter, i](){
+            ++runCounter;
+            while (!ready);
+            return i * 2;
+        });
+    }
     QTime timeout;
     timeout.start();
     while (runCounter < TasksDispatcher::instance()->capacity() && timeout.elapsed() < 1000);
@@ -128,8 +137,16 @@ TEST(TasksTest, multipleHttpTasksOverCapacity)
     QList<FutureSP<int>> results;
     QList<FutureSP<int>> otherResults;
     for (int i = 0; i < n; ++i) {
-        results << run([&ready, &runCounter, i](){++runCounter; while (!ready); return i * 2;}, RestrictionType::Http, "test");
-        otherResults << run([&ready, &otherRunCounter, i](){++otherRunCounter; while (!ready); return i * 3;}, RestrictionType::Http, "other");
+        results << run([&ready, &runCounter, i](){
+            ++runCounter;
+            while (!ready);
+            return i * 2;
+        }, RestrictionType::Http, "test");
+        otherResults << run([&ready, &otherRunCounter, i](){
+            ++otherRunCounter;
+            while (!ready);
+            return i * 3;
+        }, RestrictionType::Http, "other");
     }
     QTime timeout;
     timeout.start();
@@ -155,8 +172,13 @@ TEST(TasksTest, multipleIntensiveTasksOverCapacity)
     int capacity = TasksDispatcher::instance()->restrictorCapacity(RestrictionType::Intensive);
     int n = capacity * 2;
     QList<FutureSP<int>> results;
-    for (int i = 0; i < n; ++i)
-        results << run([&ready, &runCounter, i](){++runCounter; while (!ready); return i * 2;}, RestrictionType::Intensive);
+    for (int i = 0; i < n; ++i) {
+        results << run([&ready, &runCounter, i](){
+            ++runCounter;
+            while (!ready);
+            return i * 2;
+        }, RestrictionType::Intensive);
+    }
     QTime timeout;
     timeout.start();
     while (runCounter < capacity && timeout.elapsed() < 1000);
@@ -181,8 +203,16 @@ TEST(TasksTest, multipleCustomTasksOverCapacity)
     QList<FutureSP<int>> results;
     QList<FutureSP<int>> otherResults;
     for (int i = 0; i < n; ++i) {
-        results << run([&ready, &runCounter, i](){++runCounter; while (!ready); return i * 2;}, RestrictionType::Custom, "test");
-        otherResults << run([&ready, &otherRunCounter, i](){++otherRunCounter; while (!ready); return i * 3;}, RestrictionType::Custom, "other");
+        results << run([&ready, &runCounter, i](){
+            ++runCounter;
+            while (!ready);
+            return i * 2;
+        }, RestrictionType::Custom, "test");
+        otherResults << run([&ready, &otherRunCounter, i](){
+            ++otherRunCounter;
+            while (!ready);
+            return i * 3;
+        }, RestrictionType::Custom, "other");
     }
     QTime timeout;
     timeout.start();
@@ -210,7 +240,11 @@ TEST(TasksTest, restrictedSequenceRun)
     int n = capacity * 2;
     for (int i = 0; i < n; ++i)
         input << i;
-    FutureSP<QVector<int>> future = run(input, [&ready, &runCounter](int x){++runCounter; while (!ready); return x * 2;}, RestrictionType::Intensive);
+    FutureSP<QVector<int>> future = run(input, [&ready, &runCounter](int x){
+        ++runCounter;
+        while (!ready);
+        return x * 2;
+    }, RestrictionType::Intensive);
     QTime timeout;
     timeout.start();
     while (runCounter < capacity && timeout.elapsed() < 1000);
@@ -233,7 +267,11 @@ TEST(TasksTest, sequenceRun)
     int n = capacity * 2;
     for (int i = 0; i < n; ++i)
         input << i;
-    FutureSP<QVector<int>> future = run(input, [&ready, &runCounter](int x){++runCounter; while (!ready); return x * 2;});
+    FutureSP<QVector<int>> future = run(input, [&ready, &runCounter](int x){
+        ++runCounter;
+        while (!ready);
+        return x * 2;
+    });
     QTime timeout;
     timeout.start();
     while (runCounter < capacity && timeout.elapsed() < 1000);
@@ -358,8 +396,7 @@ TEST(TasksTest, signalWaiting)
     QThread thread;
     thread.start();
     std::atomic_bool ready {false};
-    QTimer *timer = new QTimer();
-    timer = new QTimer;
+    QTimer *timer = new QTimer;
     timer->setSingleShot(true);
     timer->moveToThread(&thread);
     FutureSP<int> future = run([timer, &ready]() {
