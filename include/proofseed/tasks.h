@@ -141,11 +141,10 @@ FutureSP<Container<Output>> run(const Container<Input> &data, Task &&task,
 {
     if (!data.size())
         return Future<Container<Output>>::successful(Container<Output>());
-    Container<FutureSP<Output>> futures;
-    futures.reserve(data.size());
-    return Future<Output>::sequence(algorithms::map(data, [task = std::forward<Task>(task), restrictionType, restrictor](const Input &x) {
+    auto seq = algorithms::map(data, [task = std::forward<Task>(task), restrictionType, restrictor](const Input &x) {
         return run([x, task]() -> Output {return task(x);}, restrictionType, restrictor);
-    }, futures));
+    });
+    return Future<Output>::sequence(seq);
 }
 
 template<template<typename...> class Container, typename Input, typename Task,

@@ -140,7 +140,6 @@ auto filter(const Container &container, const Predicate &predicate)
     return result;
 }
 
-//TODO: add overloads with no destination to create it with type of container
 template<typename Container, typename Predicate, typename Result>
 auto map(const Container &container, const Predicate &predicate, Result destination)
 -> decltype(__util::addToContainer(destination, predicate(*(container.cbegin()))),
@@ -165,6 +164,23 @@ auto map(const Container &container, const Predicate &predicate, Result destinat
     for (; it != end; ++it)
         __util::addToContainer(destination, predicate(it.key(), it.value()));
     return destination;
+}
+
+template<template<typename...> class Container, typename Input,
+         typename Predicate,
+         typename Output = typename std::result_of_t<Predicate(Input)>>
+Container<Output> map(const Container<Input> &container, const Predicate &predicate)
+{
+    return map(container, predicate, Container<Output>());
+}
+
+template<template<typename...> class Container, typename InputKey, typename InputValue,
+         typename Predicate,
+         typename OutputKey = typename std::result_of_t<Predicate(InputKey, InputValue)>::first_type,
+         typename OutputValue = typename std::result_of_t<Predicate(InputKey, InputValue)>::second_type>
+Container<OutputKey, OutputValue> map(const Container<InputKey, InputValue> &container, const Predicate &predicate)
+{
+    return map(container, predicate, Container<OutputKey, OutputValue>());
 }
 
 template<typename Container, typename Predicate, typename Result>

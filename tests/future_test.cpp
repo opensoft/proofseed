@@ -328,7 +328,7 @@ TEST(FutureTest, sequenceQList)
     QList<PromiseSP<int>> promises;
     for (int i = 0; i < n; ++i)
         promises << PromiseSP<int>::create();
-    QList<FutureSP<int>> futures = algorithms::map(promises, [](auto p){return p->future();}, QList<FutureSP<int>>());
+    QList<FutureSP<int>> futures = algorithms::map(promises, [](auto p){return p->future();});
     FutureSP<QList<int>> sequencedFuture = Future<int>::sequence(futures);
     for (int i = 0; i < n; ++i)
         EXPECT_FALSE(futures[i]->completed());
@@ -352,7 +352,7 @@ TEST(FutureTest, sequenceQListNegative)
     QList<PromiseSP<int>> promises;
     for (int i = 0; i < n; ++i)
         promises << PromiseSP<int>::create();
-    QList<FutureSP<int>> futures = algorithms::map(promises, [](auto p){return p->future();}, QList<FutureSP<int>>());
+    QList<FutureSP<int>> futures = algorithms::map(promises, [](auto p){return p->future();});
     FutureSP<QList<int>> sequencedFuture = Future<int>::sequence(futures);
     for (int i = 0; i < n; ++i)
         EXPECT_FALSE(futures[i]->completed());
@@ -387,7 +387,7 @@ TEST(FutureTest, sequenceQVector)
     QVector<PromiseSP<int>> promises;
     for (int i = 0; i < n; ++i)
         promises << PromiseSP<int>::create();
-    QVector<FutureSP<int>> futures = algorithms::map(promises, [](auto p){return p->future();}, QVector<FutureSP<int>>());
+    QVector<FutureSP<int>> futures = algorithms::map(promises, [](auto p){return p->future();});
     FutureSP<QVector<int>> sequencedFuture = Future<int>::sequence(futures);
     for (int i = 0; i < n; ++i)
         EXPECT_FALSE(futures[i]->completed());
@@ -411,7 +411,7 @@ TEST(FutureTest, sequenceQVectorNegative)
     QVector<PromiseSP<int>> promises;
     for (int i = 0; i < n; ++i)
         promises << PromiseSP<int>::create();
-    QVector<FutureSP<int>> futures = algorithms::map(promises, [](auto p){return p->future();}, QVector<FutureSP<int>>());
+    QVector<FutureSP<int>> futures = algorithms::map(promises, [](auto p){return p->future();});
     FutureSP<QVector<int>> sequencedFuture = Future<int>::sequence(futures);
     for (int i = 0; i < n; ++i)
         EXPECT_FALSE(futures[i]->completed());

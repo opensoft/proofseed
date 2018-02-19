@@ -85,7 +85,7 @@ TEST(AlgorithmsTest, eraseIfVector)
     result = testContainer;
     algorithms::eraseIf(result, bigValuePredicate);
     ASSERT_EQ(9u, result.size());
-    for (int i = 0; i < 9; ++i)
+    for (size_t i = 0; i < 9; ++i)
         EXPECT_EQ(i + 1, result[i]);
 
     result = testContainer;
@@ -620,8 +620,6 @@ TEST(AlgorithmsTest, reduceSet)
     EXPECT_EQ(1, complexResult.mult);
 }
 
-
-
 TEST(AlgorithmsTest, mapQList)
 {
     QList<int> emptyContainer;
@@ -650,7 +648,7 @@ TEST(AlgorithmsTest, mapQList)
         EXPECT_EQ(i * 2, resultQList[i - 1]);
     resultVector = algorithms::map(testContainer, listPredicate, std::vector<int>());
     ASSERT_EQ(9u, resultVector.size());
-    for (int i = 1; i <= 9; ++i)
+    for (size_t i = 1; i <= 9; ++i)
         EXPECT_EQ(i * 2, resultVector[i - 1]);
     resultQList = algorithms::map(testContainer, listPredicate, QSet<int>()).toList();
     ASSERT_EQ(9, resultQList.size());
@@ -659,7 +657,7 @@ TEST(AlgorithmsTest, mapQList)
         EXPECT_EQ(i * 2, resultQList[i - 1]);
     resultVector = setToVector(algorithms::map(testContainer, listPredicate, std::set<int>()));
     ASSERT_EQ(9u, resultVector.size());
-    for (int i = 1; i <= 9; ++i)
+    for (size_t i = 1; i <= 9; ++i)
         EXPECT_EQ(i * 2, resultVector[i - 1]);
     resultQMap = algorithms::map(testContainer, mapPredicate, QMap<int, bool>());
     ASSERT_EQ(9, resultQMap.size());
@@ -699,7 +697,7 @@ TEST(AlgorithmsTest, mapQSet)
     resultVector = algorithms::map(testContainer, listPredicate, std::vector<int>());
     std::sort(resultVector.begin(), resultVector.end());
     ASSERT_EQ(9u, resultVector.size());
-    for (int i = 1; i <= 9; ++i)
+    for (size_t i = 1; i <= 9; ++i)
         EXPECT_EQ(i * 2, resultVector[i - 1]);
     resultQList = algorithms::map(testContainer, listPredicate, QSet<int>()).toList();
     ASSERT_EQ(9, resultQList.size());
@@ -709,7 +707,7 @@ TEST(AlgorithmsTest, mapQSet)
     resultVector = setToVector(algorithms::map(testContainer, listPredicate, std::set<int>()));
     std::sort(resultVector.begin(), resultVector.end());
     ASSERT_EQ(9u, resultVector.size());
-    for (int i = 1; i <= 9; ++i)
+    for (size_t i = 1; i <= 9; ++i)
         EXPECT_EQ(i * 2, resultVector[i - 1]);
     resultQMap = algorithms::map(testContainer, mapPredicate, QMap<int, bool>());
     ASSERT_EQ(9, resultQMap.size());
@@ -748,7 +746,7 @@ TEST(AlgorithmsTest, mapQMap)
         EXPECT_EQ(testContainer[i] ? i : i * 2, resultQList[i - 1]);
     resultVector = algorithms::map(testContainer, listPredicate, std::vector<int>());
     ASSERT_EQ(9u, resultVector.size());
-    for (int i = 1; i <= 9; ++i)
+    for (size_t i = 1; i <= 9; ++i)
         EXPECT_EQ(testContainer[i] ? i : i * 2, resultVector[i - 1]);
     resultQList = algorithms::map(testContainer, stableListPredicate, QSet<int>()).toList();
     ASSERT_EQ(9, resultQList.size());
@@ -757,7 +755,7 @@ TEST(AlgorithmsTest, mapQMap)
         EXPECT_EQ(i * 2, resultQList[i - 1]);
     resultVector = setToVector(algorithms::map(testContainer, stableListPredicate, std::set<int>()));
     ASSERT_EQ(9u, resultVector.size());
-    for (int i = 1; i <= 9; ++i)
+    for (size_t i = 1; i <= 9; ++i)
         EXPECT_EQ(i * 2, resultVector[i - 1]);
     resultQMap = algorithms::map(testContainer, mapPredicate, QMap<int, bool>());
     ASSERT_EQ(9, resultQMap.size());
@@ -795,7 +793,7 @@ TEST(AlgorithmsTest, mapVector)
         EXPECT_EQ(i * 2, resultQList[i - 1]);
     resultVector = algorithms::map(testContainer, listPredicate, std::vector<int>());
     ASSERT_EQ(9u, resultVector.size());
-    for (int i = 1; i <= 9; ++i)
+    for (size_t i = 1; i <= 9; ++i)
         EXPECT_EQ(i * 2, resultVector[i - 1]);
     resultQList = algorithms::map(testContainer, listPredicate, QSet<int>()).toList();
     ASSERT_EQ(9, resultQList.size());
@@ -804,7 +802,7 @@ TEST(AlgorithmsTest, mapVector)
         EXPECT_EQ(i * 2, resultQList[i - 1]);
     resultVector = setToVector(algorithms::map(testContainer, listPredicate, std::set<int>()));
     ASSERT_EQ(9u, resultVector.size());
-    for (int i = 1; i <= 9; ++i)
+    for (size_t i = 1; i <= 9; ++i)
         EXPECT_EQ(i * 2, resultVector[i - 1]);
     resultQMap = algorithms::map(testContainer, mapPredicate, QMap<int, bool>());
     ASSERT_EQ(9, resultQMap.size());
@@ -842,7 +840,7 @@ TEST(AlgorithmsTest, mapSet)
         EXPECT_EQ(i * 2, resultQList[i - 1]);
     resultVector = algorithms::map(testContainer, listPredicate, std::vector<int>());
     ASSERT_EQ(9u, resultVector.size());
-    for (int i = 1; i <= 9; ++i)
+    for (size_t i = 1; i <= 9; ++i)
         EXPECT_EQ(i * 2, resultVector[i - 1]);
     resultQList = algorithms::map(testContainer, listPredicate, QSet<int>()).toList();
     ASSERT_EQ(9, resultQList.size());
@@ -851,7 +849,7 @@ TEST(AlgorithmsTest, mapSet)
         EXPECT_EQ(i * 2, resultQList[i - 1]);
     resultVector = setToVector(algorithms::map(testContainer, listPredicate, std::set<int>()));
     ASSERT_EQ(9u, resultVector.size());
-    for (int i = 1; i <= 9; ++i)
+    for (size_t i = 1; i <= 9; ++i)
         EXPECT_EQ(i * 2, resultVector[i - 1]);
     resultQMap = algorithms::map(testContainer, mapPredicate, QMap<int, bool>());
     ASSERT_EQ(9, resultQMap.size());
@@ -859,4 +857,79 @@ TEST(AlgorithmsTest, mapSet)
         EXPECT_TRUE(resultQMap.contains(i * 2));
         EXPECT_EQ(!(i % 3), resultQMap[i * 2]);
     }
+}
+
+TEST(AlgorithmsTest, mapQListShort)
+{
+    QList<int> testContainer = {1, 2, 3, 4, 5, 6, 7, 8, 9};
+
+    QList<int> resultQList = algorithms::map(testContainer, [](int x){return x * 2;});
+    ASSERT_EQ(9, resultQList.size());
+    for (int i = 1; i <= 9; ++i)
+        EXPECT_EQ(i * 2, resultQList[i - 1]);
+
+    QList<double> resultQList2 = algorithms::map(testContainer, [](int x){return x * 2.0;});
+    ASSERT_EQ(9, resultQList2.size());
+    for (int i = 1; i <= 9; ++i)
+        EXPECT_DOUBLE_EQ(i * 2, resultQList2[i - 1]);
+}
+
+TEST(AlgorithmsTest, mapQSetShort)
+{
+    QSet<int> testContainer = {1, 2, 3, 4, 5, 6, 7, 8, 9};
+
+    QSet<int> resultQSet = algorithms::map(testContainer, [](int x){return x * 2;});
+    QList<int> resultQList = resultQSet.toList();
+    std::sort(resultQList.begin(), resultQList.end());
+    ASSERT_EQ(9, resultQList.size());
+    for (int i = 1; i <= 9; ++i)
+        EXPECT_EQ(i * 2, resultQList[i - 1]);
+}
+
+TEST(AlgorithmsTest, mapQMapShort)
+{
+    QMap<int, bool> testContainer = {{1, true}, {2, false}, {3, true}, {4, false}, {5, true}, {6, false}, {7, true}, {8, false}, {9, true}};
+
+    QMap<int, bool> resultQMap = algorithms::map(testContainer, [](int x, bool){return qMakePair(x * 2, !(x % 3));});
+    ASSERT_EQ(9, resultQMap.size());
+    for (int i = 1; i <= 9; ++i) {
+        EXPECT_TRUE(resultQMap.contains(i * 2));
+        EXPECT_EQ(!(i % 3), resultQMap[i * 2]);
+    }
+
+    QMap<QString, int> resultQMap2 = algorithms::map(testContainer, [](int x, bool) {
+        return qMakePair(QString::number(x), x % 3);
+    });
+    ASSERT_EQ(9, resultQMap.size());
+    for (int i = 1; i <= 9; ++i) {
+        QString key = QString::number(i);
+        EXPECT_TRUE(resultQMap2.contains(key));
+        EXPECT_EQ(i % 3, resultQMap2[key]);
+    }
+}
+
+TEST(AlgorithmsTest, mapVectorShort)
+{
+    std::vector<int> testContainer = {1, 2, 3, 4, 5, 6, 7, 8, 9};
+
+    std::vector<int> resultVector = algorithms::map(testContainer, [](int x){return x * 2;});
+    ASSERT_EQ(9u, resultVector.size());
+    for (size_t i = 1; i <= 9; ++i)
+        EXPECT_EQ(i * 2, resultVector[i - 1]);
+
+    std::vector<double> resultVector2 = algorithms::map(testContainer, [](int x){return x * 2.0;});
+    ASSERT_EQ(9u, resultVector2.size());
+    for (size_t i = 1; i <= 9; ++i)
+        EXPECT_DOUBLE_EQ(i * 2.0, resultVector2[i - 1]);
+}
+
+TEST(AlgorithmsTest, mapSetShort)
+{
+    std::set<int> testContainer = {1, 2, 3, 4, 5, 6, 7, 8, 9};
+
+    std::set<int> resultSet = algorithms::map(testContainer, [](int x){return x * 2;});
+    std::vector<int> resultVector(resultSet.begin(), resultSet.end());
+    ASSERT_EQ(9, resultVector.size());
+    for (size_t i = 1; i <= 9; ++i)
+        EXPECT_EQ(i * 2, resultVector[i - 1]);
 }
