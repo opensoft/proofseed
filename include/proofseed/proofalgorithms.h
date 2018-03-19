@@ -1,7 +1,10 @@
 #ifndef PROOFALGORITHMS_H
 #define PROOFALGORITHMS_H
 
+#include <QPair>
+
 #include <type_traits>
+#include <algorithm>
 
 namespace Proof {
 namespace algorithms {
@@ -102,6 +105,29 @@ auto findIf(const Container &container, const Predicate &predicate, const Result
             return qMakePair(it.key(), it.value());
     }
     return defaultValue;
+}
+
+
+template<template<typename...> class Container, typename Input, typename Predicate>
+auto forEach(const Container<Input> &container, const Predicate &predicate)
+-> decltype(predicate(*(container.cbegin())),
+            void())
+{
+    auto it = container.cbegin();
+    auto end = container.cend();
+    for (; it != end; ++it)
+        predicate(*it);
+}
+
+template<template<typename...> class Container, typename InputKey, typename InputValue, typename Predicate>
+auto forEach(const Container<InputKey, InputValue> &container, const Predicate &predicate)
+-> decltype(predicate(container.cbegin().key(), container.cbegin().value()),
+            void())
+{
+    auto it = container.cbegin();
+    auto end = container.cend();
+    for (; it != end; ++it)
+        predicate(it.key(), it.value());
 }
 
 // filter, map and reduce are not lazy, they copy values.
