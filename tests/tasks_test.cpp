@@ -62,6 +62,20 @@ TEST(TasksTest, singleDeferredTask)
     EXPECT_EQ(42, result->result());
 }
 
+TEST(TasksTest, singleVoidTask)
+{
+    std::atomic_bool flag {false};
+    FutureSP<bool> result = run([&flag]() {
+        flag = true;
+    });
+    result->wait(1000);
+    ASSERT_TRUE(result->completed());
+    EXPECT_TRUE(result->succeeded());
+    EXPECT_FALSE(result->failed());
+    EXPECT_EQ(true, result->result());
+    EXPECT_EQ(true, flag);
+}
+
 TEST(TasksTest, singleDeferredTaskWithFailure)
 {
     PromiseSP<int> innerPromise = PromiseSP<int>::create();
@@ -286,6 +300,150 @@ TEST(TasksTest, sequenceRun)
     ASSERT_EQ(n, result.count());
     for (int i = 0; i < n; ++i)
         EXPECT_EQ(i * 2, result[i]);
+}
+
+TEST(TasksTest, deferredSequenceRun)
+{
+    std::atomic_bool ready {false};
+    std::atomic_int runCounter {0};
+    QVector<int> input;
+    int capacity = TasksDispatcher::instance()->capacity();
+    int n = capacity * 2;
+    for (int i = 0; i < n; ++i)
+        input << i;
+    FutureSP<QVector<int>> future = run(input, [&ready, &runCounter](int x) {
+        ++runCounter;
+        while (!ready);
+        return Future<int>::successful(x * 2);
+    });
+    QTime timeout;
+    timeout.start();
+    while (runCounter < capacity && timeout.elapsed() < 1000);
+    QThread::msleep(25);
+    EXPECT_EQ(capacity, runCounter);
+    EXPECT_FALSE(future->completed());
+    ready = true;
+    future->wait(1000);
+    ASSERT_TRUE(future->completed());
+    ASSERT_TRUE(future->succeeded());
+    auto result = future->result();
+    ASSERT_EQ(n, result.count());
+    for (int i = 0; i < n; ++i)
+        EXPECT_EQ(i * 2, result[i]);
+}
+
+TEST(TasksTest, voidSequenceRun)
+{
+    std::atomic_bool ready {false};
+    std::atomic_int runCounter {0};
+    QVector<int> input;
+    int capacity = TasksDispatcher::instance()->capacity();
+    int n = capacity * 2;
+    for (int i = 0; i < n; ++i)
+        input << i;
+    FutureSP<bool> future = run(input, [&ready, &runCounter](int) {
+        ++runCounter;
+        while (!ready);
+    });
+    QTime timeout;
+    timeout.start();
+    while (runCounter < capacity && timeout.elapsed() < 1000);
+    QThread::msleep(25);
+    EXPECT_EQ(capacity, runCounter);
+    EXPECT_FALSE(future->completed());
+    ready = true;
+    future->wait(1000);
+    ASSERT_TRUE(future->completed());
+    ASSERT_TRUE(future->succeeded());
+    auto result = future->result();
+    EXPECT_TRUE(result);
+}
+
+TEST(TasksTest, sequenceRunWithIndices)
+{
+    std::atomic_bool ready {false};
+    std::atomic_int runCounter {0};
+    QVector<int> input;
+    int capacity = TasksDispatcher::instance()->capacity();
+    int n = capacity * 2;
+    for (int i = 0; i < n; ++i)
+        input << (n - i);
+    FutureSP<QVector<long long>> future = run(input, [n, &ready, &runCounter](long long index, int x) {
+        ++runCounter;
+        while (!ready);
+        return ((n - index) == x) ? index * 2 : -42;
+    });
+    QTime timeout;
+    timeout.start();
+    while (runCounter < capacity && timeout.elapsed() < 1000);
+    QThread::msleep(25);
+    EXPECT_EQ(capacity, runCounter);
+    EXPECT_FALSE(future->completed());
+    ready = true;
+    future->wait(1000);
+    ASSERT_TRUE(future->completed());
+    ASSERT_TRUE(future->succeeded());
+    auto result = future->result();
+    ASSERT_EQ(n, result.count());
+    for (int i = 0; i < n; ++i)
+        EXPECT_EQ(i * 2, result[i]);
+}
+
+TEST(TasksTest, deferredSequenceRunWithIndices)
+{
+    std::atomic_bool ready {false};
+    std::atomic_int runCounter {0};
+    QVector<int> input;
+    int capacity = TasksDispatcher::instance()->capacity();
+    int n = capacity * 2;
+    for (int i = 0; i < n; ++i)
+        input << (n - i);
+    FutureSP<QVector<long long>> future = run(input, [n, &ready, &runCounter](long long index, int x) {
+        ++runCounter;
+        while (!ready);
+        return Future<long long>::successful(((n - index) == x) ? index * 2 : -42);
+    });
+    QTime timeout;
+    timeout.start();
+    while (runCounter < capacity && timeout.elapsed() < 1000);
+    QThread::msleep(25);
+    EXPECT_EQ(capacity, runCounter);
+    EXPECT_FALSE(future->completed());
+    ready = true;
+    future->wait(1000);
+    ASSERT_TRUE(future->completed());
+    ASSERT_TRUE(future->succeeded());
+    auto result = future->result();
+    ASSERT_EQ(n, result.count());
+    for (int i = 0; i < n; ++i)
+        EXPECT_EQ(i * 2, result[i]);
+}
+
+TEST(TasksTest, voidSequenceRunWithIndices)
+{
+    std::atomic_bool ready {false};
+    std::atomic_int runCounter {0};
+    QVector<int> input;
+    int capacity = TasksDispatcher::instance()->capacity();
+    int n = capacity * 2;
+    for (int i = 0; i < n; ++i)
+        input << (n - i);
+    FutureSP<bool> future = run(input, [&ready, &runCounter](long long, int) {
+        ++runCounter;
+        while (!ready);
+    });
+    QTime timeout;
+    timeout.start();
+    while (runCounter < capacity && timeout.elapsed() < 1000);
+    QThread::msleep(25);
+    EXPECT_EQ(capacity, runCounter);
+    EXPECT_FALSE(future->completed());
+    ready = true;
+    future->wait(1000);
+    ASSERT_TRUE(future->completed());
+    ASSERT_TRUE(future->succeeded());
+    auto result = future->result();
+    EXPECT_TRUE(result);
 }
 
 TEST(TasksTest, emptySequenceRun)

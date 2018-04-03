@@ -135,16 +135,101 @@ auto run(Task &&task, RestrictionType restrictionType = RestrictionType::Custom,
 }
 
 template<template<typename...> class Container, typename Input, typename Task,
-         typename Output = typename std::result_of_t<Task(Input)>>
-FutureSP<Container<Output>> run(const Container<Input> &data, Task &&task,
-                                RestrictionType restrictionType = RestrictionType::Custom, const QString &restrictor = QString())
+         typename Output = typename std::result_of_t<Task(Input)>,
+         typename = typename std::enable_if_t<!std::is_same<Output, void>::value && !__util::IsSpecialization2<Output, QSharedPointer, Future>::value>>
+auto run(const Container<Input> &data, Task &&task,
+         RestrictionType restrictionType = RestrictionType::Custom, const QString &restrictor = QString())
+-> decltype(task(*(data.cbegin())),
+            FutureSP<Container<Output>>())
 {
     if (!data.size())
-        return Future<Container<Output>>::successful(Container<Output>());
+        return Future<Container<Output>>::successful();
     auto seq = algorithms::map(data, [task = std::forward<Task>(task), restrictionType, restrictor](const Input &x) {
         return run([x, task]() -> Output {return task(x);}, restrictionType, restrictor);
     });
     return Future<Output>::sequence(seq);
+}
+
+template<template<typename...> class Container, typename Input, typename Task,
+         typename Output = typename std::result_of_t<Task(Input)>,
+         typename = typename std::enable_if_t<__util::IsSpecialization2<Output, QSharedPointer, Future>::value>,
+         typename OutputValue = typename std::decay<decltype(*Output().data())>::type::Value>
+auto run(const Container<Input> &data, Task &&task,
+         RestrictionType restrictionType = RestrictionType::Custom, const QString &restrictor = QString())
+-> decltype(task(*(data.cbegin())),
+            FutureSP<Container<OutputValue>>())
+{
+    if (!data.size())
+        return Future<Container<OutputValue>>::successful();
+    auto seq = algorithms::map(data, [task = std::forward<Task>(task), restrictionType, restrictor](const Input &x) {
+        return run([x, task]() -> Output {return task(x);}, restrictionType, restrictor);
+    });
+    return Future<OutputValue>::sequence(seq);
+}
+
+template<template<typename...> class Container, typename Input, typename Task,
+         typename Output = typename std::result_of_t<Task(Input)>,
+         typename = typename std::enable_if_t<std::is_same<Output, void>::value>>
+auto run(const Container<Input> &data, Task &&task,
+         RestrictionType restrictionType = RestrictionType::Custom, const QString &restrictor = QString())
+-> decltype(task(*(data.cbegin())),
+            FutureSP<bool>())
+{
+    if (!data.size())
+        return Future<bool>::successful(true);
+    auto seq = algorithms::map(data, [task = std::forward<Task>(task), restrictionType, restrictor](const Input &x) {
+        return run([x, task]() {task(x);}, restrictionType, restrictor);
+    });
+    return Future<bool>::sequence(seq)->map([](const auto &){return true;});
+}
+
+template<template<typename...> class Container, typename Input, typename Task,
+         typename Output = typename std::result_of_t<Task(long long, Input)>,
+         typename = typename std::enable_if_t<!std::is_same<Output, void>::value && !__util::IsSpecialization2<Output, QSharedPointer, Future>::value>>
+auto run(const Container<Input> &data, Task &&task,
+         RestrictionType restrictionType = RestrictionType::Custom, const QString &restrictor = QString())
+-> decltype(task(0ll, *(data.cbegin())),
+            FutureSP<Container<Output>>())
+{
+    if (!data.size())
+        return Future<Container<Output>>::successful();
+    auto seq = algorithms::map(data, [task = std::forward<Task>(task), restrictionType, restrictor](long long index, const Input &x) {
+        return run([index, x, task]() -> Output {return task(index, x);}, restrictionType, restrictor);
+    });
+    return Future<Output>::sequence(seq);
+}
+
+template<template<typename...> class Container, typename Input, typename Task,
+         typename Output = typename std::result_of_t<Task(long long, Input)>,
+         typename = typename std::enable_if_t<__util::IsSpecialization2<Output, QSharedPointer, Future>::value>,
+         typename OutputValue = typename std::decay<decltype(*Output().data())>::type::Value>
+auto run(const Container<Input> &data, Task &&task,
+         RestrictionType restrictionType = RestrictionType::Custom, const QString &restrictor = QString())
+-> decltype(task(0ll, *(data.cbegin())),
+            FutureSP<Container<OutputValue>>())
+{
+    if (!data.size())
+        return Future<Container<OutputValue>>::successful();
+    auto seq = algorithms::map(data, [task = std::forward<Task>(task), restrictionType, restrictor](long long index, const Input &x) {
+        return run([index, x, task]() -> Output {return task(index, x);}, restrictionType, restrictor);
+    });
+    return Future<OutputValue>::sequence(seq);
+}
+
+template<template<typename...> class Container, typename Input, typename Task,
+         typename Output = typename std::result_of_t<Task(long long, Input)>,
+         typename = typename std::enable_if_t<std::is_same<Output, void>::value>>
+auto run(const Container<Input> &data, Task &&task,
+         RestrictionType restrictionType = RestrictionType::Custom, const QString &restrictor = QString())
+-> decltype(task(0ll, *(data.cbegin())),
+            FutureSP<bool>())
+{
+    if (!data.size())
+        return Future<bool>::successful(true);
+    auto seq = algorithms::map(data, [task = std::forward<Task>(task), restrictionType, restrictor](long long index, const Input &x) {
+        return run([index, x, task]() {task(index, x);}, restrictionType, restrictor);
+    });
+    return Future<bool>::sequence(seq)->map([](const auto &){return true;});
 }
 
 template<template<typename...> class Container, typename Input, typename Task,
@@ -154,7 +239,7 @@ auto clusteredRun(const Container<Input> &data, Task &&task, qint64 minClusterSi
 -> decltype((Container<Output>()).resize(data.count()), FutureSP<Container<Output>>())
 {
     if (!data.size())
-        return Future<Container<Output>>::successful(Container<Output>());
+        return Future<Container<Output>>::successful();
     if (minClusterSize <= 0)
         minClusterSize = 1;
 

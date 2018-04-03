@@ -369,7 +369,6 @@ private:
 
     void fillSuccess(const T &result)
     {
-        Q_ASSERT_X(!completed(), "Future::fillSuccess", "Can't fill one future twice");
         if (futures::__util::hasLastFailure()) {
             auto failure = futures::__util::lastFailure();
             futures::__util::resetLastFailure();
@@ -378,6 +377,7 @@ private:
         }
 
         m_mainLock.lock();
+        Q_ASSERT_X(!completed(), "Future::fillSuccess", "Can't fill one future twice");
         m_result = result;
         m_state.store(SucceededFuture, std::memory_order_release);
         for (const auto &f : m_successCallbacks)
@@ -389,8 +389,8 @@ private:
 
     void fillFailure(const Failure &reason)
     {
-        Q_ASSERT_X(!completed(), "Future::fillFailure", "Can't fill one future twice");
         m_mainLock.lock();
+        Q_ASSERT_X(!completed(), "Future::fillFailure", "Can't fill one future twice");
         m_failureReason = reason;
         m_state.store(FailedFuture, std::memory_order_release);
         for (const auto &f : m_failureCallbacks)

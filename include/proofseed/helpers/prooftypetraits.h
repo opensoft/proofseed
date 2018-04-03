@@ -6,6 +6,12 @@ namespace Proof {
 namespace __util {
 //TODO: think about universal extractor instead of different namings per level
 
+template<typename Checkable>
+struct HasTypeParams : std::false_type {};
+
+template<template<typename...> class Wrapper, typename ...Args>
+struct HasTypeParams<Wrapper<Args...>> : std::true_type {};
+
 template<typename Checkable, template<typename...> class Wrapper>
 struct IsSpecialization : std::false_type {};
 

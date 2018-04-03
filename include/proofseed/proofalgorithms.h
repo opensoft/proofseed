@@ -1,6 +1,8 @@
 #ifndef PROOFALGORITHMS_H
 #define PROOFALGORITHMS_H
 
+#include "proofcore/helpers/prooftypetraits.h"
+
 #include <QPair>
 
 #include <type_traits>
@@ -42,8 +44,58 @@ auto reserveContainer(C &container, long long size, level<1>) -> decltype(contai
     container.reserve(size);
 }
 
-//Fallback
 template<typename C> void reserveContainer(C &, long long, level<0>) {}
+
+//Caller
+template<typename C> void reserveContainer(C &container, long long size) {
+    reserveContainer(container, size, level<1>{});
+}
+
+template<typename C>
+auto beginIterator(C &container, level<2>) -> decltype(container.cbegin(), typename C::const_iterator())
+{
+    return container.cbegin();
+}
+
+template<typename C>
+auto beginIterator(C &container, level<1>) -> decltype(container.constBegin(), typename C::const_iterator())
+{
+    return container.constBegin();
+}
+
+template<typename C>
+auto beginIterator(C &container, level<0>) -> decltype(container.begin(), typename C::iterator())
+{
+    return container.begin();
+}
+
+//Caller
+template<typename C> auto beginIterator(C &container) {
+    return beginIterator(container, level<2>{});
+}
+
+template<typename C>
+auto endIterator(C &container, level<2>) -> decltype(container.cend(), typename C::const_iterator())
+{
+    return container.cend();
+}
+
+template<typename C>
+auto endIterator(C &container, level<1>) -> decltype(container.constEnd(), typename C::const_iterator())
+{
+    return container.constEnd();
+}
+
+template<typename C>
+auto endIterator(C &container, level<0>) -> decltype(container.end(), typename C::iterator())
+{
+    return container.end();
+}
+
+//Caller
+template<typename C> auto endIterator(C &container) {
+    return endIterator(container, level<2>{});
+}
 
 //TODO: remove this workaround with wrapper for const_cast after msvc fix its INTERNAL COMPILER ERROR
 template<typename T> T & constCastWrapper(const T &ref)
@@ -54,7 +106,7 @@ template<typename T> T & constCastWrapper(const T &ref)
 
 template<typename Container, typename Predicate>
 auto eraseIf(Container &container, const Predicate &predicate)
--> decltype(predicate(container.cbegin().key(), container.cbegin().value()),
+-> decltype(predicate(__util::beginIterator(container).key(), __util::beginIterator(container).value()),
             void())
 {
     for (auto it = container.begin(); it != container.end();) {
@@ -67,7 +119,7 @@ auto eraseIf(Container &container, const Predicate &predicate)
 
 template<typename Container, typename Predicate>
 auto eraseIf(Container &container, const Predicate &predicate)
--> decltype(predicate(*(container.cbegin())),
+-> decltype(predicate(*(__util::beginIterator(container))),
             void())
 {
     container.erase(std::remove_if(container.begin(), container.end(), predicate), container.end());
@@ -81,11 +133,11 @@ void makeUnique(Container &container)
 
 template<typename Container, typename Predicate, typename Result = typename Container::value_type>
 auto findIf(const Container &container, const Predicate &predicate, const Result &defaultValue = Result())
--> decltype(predicate(*(container.cbegin())),
+-> decltype(predicate(*(__util::beginIterator(container))),
             Result())
 {
-    auto it = container.cbegin();
-    auto end = container.cend();
+    auto it = __util::beginIterator(container);
+    auto end = __util::endIterator(container);
     for (; it != end; ++it) {
         if (predicate(*it))
             return *it;
@@ -95,11 +147,11 @@ auto findIf(const Container &container, const Predicate &predicate, const Result
 
 template<typename Container, typename Predicate, typename Result = QPair<typename Container::key_type, typename Container::mapped_type>>
 auto findIf(const Container &container, const Predicate &predicate, const Result &defaultValue = Result())
--> decltype(predicate(container.cbegin().key(), container.cbegin().value()),
+-> decltype(predicate(__util::beginIterator(container).key(), __util::beginIterator(container).value()),
             Result())
 {
-    auto it = container.cbegin();
-    auto end = container.cend();
+    auto it = __util::beginIterator(container);
+    auto end = __util::endIterator(container);
     for (; it != end; ++it) {
         if (predicate(it.key(), it.value()))
             return qMakePair(it.key(), it.value());
@@ -107,25 +159,61 @@ auto findIf(const Container &container, const Predicate &predicate, const Result
     return defaultValue;
 }
 
-
-template<template<typename...> class Container, typename Input, typename Predicate>
-auto forEach(const Container<Input> &container, const Predicate &predicate)
--> decltype(predicate(*(container.cbegin())),
+template<typename Container, typename Predicate,
+         typename = typename std::enable_if_t<!Proof::__util::HasTypeParams<Container>::value>>
+auto forEach(const Container &container, const Predicate &predicate)
+-> decltype(predicate(*(__util::beginIterator(container))),
             void())
 {
-    auto it = container.cbegin();
-    auto end = container.cend();
+    auto it = __util::beginIterator(container);
+    auto end = __util::endIterator(container);
     for (; it != end; ++it)
         predicate(*it);
 }
 
-template<template<typename...> class Container, typename InputKey, typename InputValue, typename Predicate>
-auto forEach(const Container<InputKey, InputValue> &container, const Predicate &predicate)
--> decltype(predicate(container.cbegin().key(), container.cbegin().value()),
+template<typename Container, typename Predicate,
+         typename = typename std::enable_if_t<!Proof::__util::HasTypeParams<Container>::value>>
+auto forEach(const Container &container, const Predicate &predicate)
+-> decltype(predicate(0ll, *(__util::beginIterator(container))),
             void())
 {
-    auto it = container.cbegin();
-    auto end = container.cend();
+    auto it = __util::beginIterator(container);
+    auto end = __util::endIterator(container);
+    long long counter = -1;
+    for (; it != end; ++it)
+        predicate(++counter, *it);
+}
+
+template<template<typename...> class Container, typename Input, typename Predicate>
+auto forEach(const Container<Input> &container, const Predicate &predicate)
+-> decltype(predicate(*(__util::beginIterator(container))),
+            void())
+{
+    auto it = __util::beginIterator(container);
+    auto end = __util::endIterator(container);
+    for (; it != end; ++it)
+        predicate(*it);
+}
+
+template<template<typename...> class Container, typename Input, typename Predicate>
+auto forEach(const Container<Input> &container, const Predicate &predicate)
+-> decltype(predicate(0ll, *(__util::beginIterator(container))),
+            void())
+{
+    auto it = __util::beginIterator(container);
+    auto end = __util::endIterator(container);
+    long long counter = -1;
+    for (; it != end; ++it)
+        predicate(++counter, *it);
+}
+
+template<template<typename...> class Container, typename InputKey, typename InputValue, typename Predicate>
+auto forEach(const Container<InputKey, InputValue> &container, const Predicate &predicate)
+-> decltype(predicate(__util::beginIterator(container).key(), __util::beginIterator(container).value()),
+            void())
+{
+    auto it = __util::beginIterator(container);
+    auto end = __util::endIterator(container);
     for (; it != end; ++it)
         predicate(it.key(), it.value());
 }
@@ -136,13 +224,13 @@ auto forEach(const Container<InputKey, InputValue> &container, const Predicate &
 // If ever lazy variant will be needed probably we will need to use boost ranges or something similar then.
 template<typename Container, typename Predicate>
 auto filter(const Container &container, const Predicate &predicate)
--> decltype(__util::addToContainer(__util::constCastWrapper(container), *(container.cbegin())),
-            predicate(*(container.cbegin())),
+-> decltype(__util::addToContainer(__util::constCastWrapper(container), *(__util::beginIterator(container))),
+            predicate(*(__util::beginIterator(container))),
             Container())
 {
     Container result;
-    auto it = container.cbegin();
-    auto end = container.cend();
+    auto it = __util::beginIterator(container);
+    auto end = __util::endIterator(container);
     for (; it != end; ++it) {
         if (predicate(*it))
             __util::addToContainer(result, *it);
@@ -152,13 +240,13 @@ auto filter(const Container &container, const Predicate &predicate)
 
 template<typename Container, typename Predicate>
 auto filter(const Container &container, const Predicate &predicate)
--> decltype(__util::addToContainer(__util::constCastWrapper(container), container.cbegin()),
-            predicate(container.cbegin().key(), container.cbegin().value()),
+-> decltype(__util::addToContainer(__util::constCastWrapper(container), __util::beginIterator(container)),
+            predicate(__util::beginIterator(container).key(), __util::beginIterator(container).value()),
             Container())
 {
     Container result;
-    auto it = container.cbegin();
-    auto end = container.cend();
+    auto it = __util::beginIterator(container);
+    auto end = __util::endIterator(container);
     for (; it != end; ++it) {
         if (predicate(it.key(), it.value()))
             __util::addToContainer(result, it);
@@ -166,40 +254,104 @@ auto filter(const Container &container, const Predicate &predicate)
     return result;
 }
 
-template<typename Container, typename Predicate, typename Result>
+//Non-socketed type without indices
+template<typename Container, typename Predicate, typename Result,
+         typename = typename std::enable_if_t<!Proof::__util::HasTypeParams<Container>::value>>
 auto map(const Container &container, const Predicate &predicate, Result destination)
--> decltype(__util::addToContainer(destination, predicate(*(container.cbegin()))),
+-> decltype(__util::addToContainer(destination, predicate(*(__util::beginIterator(container)))),
             Result())
 {
-    auto it = container.cbegin();
-    auto end = container.cend();
-    __util::reserveContainer(destination, container.size(), __util::level<1>{});
+    auto it = __util::beginIterator(container);
+    auto end = __util::endIterator(container);
+    __util::reserveContainer(destination, container.size());
     for (; it != end; ++it)
         __util::addToContainer(destination, predicate(*it));
     return destination;
 }
 
-template<typename Container, typename Predicate, typename Result>
+//Non-socketed type with indices
+template<typename Container, typename Predicate, typename Result,
+         typename = typename std::enable_if_t<!Proof::__util::HasTypeParams<Container>::value>>
 auto map(const Container &container, const Predicate &predicate, Result destination)
--> decltype(__util::addToContainer(destination, predicate(container.cbegin().key(), container.cbegin().value())),
+-> decltype(__util::addToContainer(destination, predicate(0ll, *(__util::beginIterator(container)))),
             Result())
 {
-    auto it = container.cbegin();
-    auto end = container.cend();
-    __util::reserveContainer(destination, container.size(), __util::level<1>{});
+    auto it = __util::beginIterator(container);
+    auto end = __util::endIterator(container);
+    __util::reserveContainer(destination, container.size());
+    long long counter = -1;
+    for (; it != end; ++it)
+        __util::addToContainer(destination, predicate(++counter, *it));
+    return destination;
+}
+
+//Single socketed type without indices
+template<template<typename...> class Container, typename Input,
+         typename Predicate, typename Result>
+auto map(const Container<Input> &container, const Predicate &predicate, Result destination)
+-> decltype(__util::addToContainer(destination, predicate(*(__util::beginIterator(container)))),
+            Result())
+{
+    auto it = __util::beginIterator(container);
+    auto end = __util::endIterator(container);
+    __util::reserveContainer(destination, container.size());
+    for (; it != end; ++it)
+        __util::addToContainer(destination, predicate(*it));
+    return destination;
+}
+
+//Single socketed type with indices
+template<template<typename...> class Container, typename Input,
+         typename Predicate, typename Result>
+auto map(const Container<Input> &container, const Predicate &predicate, Result destination)
+-> decltype(__util::addToContainer(destination, predicate(0ll, *(__util::beginIterator(container)))),
+            Result())
+{
+    auto it = __util::beginIterator(container);
+    auto end = __util::endIterator(container);
+    __util::reserveContainer(destination, container.size());
+    long long counter = -1;
+    for (; it != end; ++it)
+        __util::addToContainer(destination, predicate(++counter, *it));
+    return destination;
+}
+
+//Double socketed type
+template<template<typename...> class Container, typename InputKey, typename InputValue,
+         typename Predicate, typename Result>
+auto map(const Container<InputKey, InputValue> &container, const Predicate &predicate, Result destination)
+-> decltype(__util::addToContainer(destination, predicate(__util::beginIterator(container).key(), __util::beginIterator(container).value())),
+            Result())
+{
+    auto it = __util::beginIterator(container);
+    auto end = __util::endIterator(container);
+    __util::reserveContainer(destination, container.size());
     for (; it != end; ++it)
         __util::addToContainer(destination, predicate(it.key(), it.value()));
     return destination;
 }
 
+//Single socketed type without indices, short version
 template<template<typename...> class Container, typename Input,
-         typename Predicate,
-         typename Output = typename std::result_of_t<Predicate(Input)>>
-Container<Output> map(const Container<Input> &container, const Predicate &predicate)
+         typename Predicate>
+auto map(const Container<Input> &container, const Predicate &predicate)
+-> decltype (predicate(*(__util::beginIterator(container))),
+             Container<typename std::result_of_t<Predicate(Input)>>())
 {
-    return map(container, predicate, Container<Output>());
+    return map(container, predicate, Container<typename std::result_of_t<Predicate(Input)>>());
 }
 
+//Single socketed type with indices, short version
+template<template<typename...> class Container, typename Input,
+         typename Predicate>
+auto map(const Container<Input> &container, const Predicate &predicate)
+-> decltype (predicate(0ll, *(__util::beginIterator(container))),
+             Container<typename std::result_of_t<Predicate(long long, Input)>>())
+{
+    return map(container, predicate, Container<typename std::result_of_t<Predicate(long long, Input)>>());
+}
+
+//Double socketed type, short version
 template<template<typename...> class Container, typename InputKey, typename InputValue,
          typename Predicate,
          typename OutputKey = typename std::result_of_t<Predicate(InputKey, InputValue)>::first_type,
@@ -211,11 +363,11 @@ Container<OutputKey, OutputValue> map(const Container<InputKey, InputValue> &con
 
 template<typename Container, typename Predicate, typename Result>
 auto reduce(const Container &container, const Predicate &predicate, Result acc)
--> decltype(acc = predicate(acc, *(container.cbegin())),
+-> decltype(acc = predicate(acc, *(__util::beginIterator(container))),
             Result())
 {
-    auto it = container.cbegin();
-    auto end = container.cend();
+    auto it = __util::beginIterator(container);
+    auto end = __util::endIterator(container);
     for (; it != end; ++it)
         acc = predicate(acc, *it);
     return acc;
@@ -223,11 +375,11 @@ auto reduce(const Container &container, const Predicate &predicate, Result acc)
 
 template<typename Container, typename Predicate, typename Result>
 auto reduce(const Container &container, const Predicate &predicate, Result acc)
--> decltype(acc = predicate(acc, container.cbegin().key(), container.cbegin().value()),
+-> decltype(acc = predicate(acc, __util::beginIterator(container).key(), __util::beginIterator(container).value()),
             Result())
 {
-    auto it = container.cbegin();
-    auto end = container.cend();
+    auto it = __util::beginIterator(container);
+    auto end = __util::endIterator(container);
     for (; it != end; ++it)
         acc = predicate(acc, it.key(), it.value());
     return acc;
