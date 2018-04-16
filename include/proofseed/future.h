@@ -29,7 +29,7 @@ struct Failure
         UserFriendlyHint = 0x1,
         CriticalHint = 0x2
     };
-    Failure(const QString &message, long moduleCode, long errorCode, long hints = 0, const QVariant &data = QVariant())
+    Failure(const QString &message, long moduleCode, long errorCode, long hints = Failure::NoHint, const QVariant &data = QVariant())
         : exists(true), moduleCode(moduleCode), errorCode(errorCode), hints(hints), message(message), data(data)
     {}
     explicit Failure(const QVariant &data)

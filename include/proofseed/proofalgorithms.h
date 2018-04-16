@@ -385,6 +385,55 @@ auto reduce(const Container &container, const Predicate &predicate, Result acc)
     return acc;
 }
 
+template<template<typename...> class Container1, template<typename...> class Container2, typename Input, typename Result>
+auto flatten(const Container1<Container2<Input>> &container, Result destination)
+-> decltype(__util::addToContainer(destination, *(__util::beginIterator(*(__util::beginIterator(container))))),
+            Result())
+{
+    auto outerIt = __util::beginIterator(container);
+    auto outerEnd = __util::endIterator(container);
+    for (; outerIt != outerEnd; ++outerIt) {
+        auto it = __util::beginIterator(*outerIt);
+        auto end = __util::endIterator(*outerIt);
+        for (; it != end; ++it)
+            __util::addToContainer(destination, *it);
+    }
+    return destination;
+}
+
+template<template<typename...> class Container1, template<typename...> class Container2, typename Input>
+Container1<Input> flatten(const Container1<Container2<Input>> &container)
+{
+    return flatten(container, Container1<Input>());
+}
+
+
+template<template<typename...> class Container1, template<typename...> class Container2, typename Input,
+         typename Predicate, typename Result>
+auto flatFilter(const Container1<Container2<Input>> &container, const Predicate &predicate, Result destination)
+-> decltype(__util::addToContainer(destination, *(__util::beginIterator(*(__util::beginIterator(container))))),
+            predicate(*(__util::beginIterator(*(__util::beginIterator(container))))),
+            Result())
+{
+    auto outerIt = __util::beginIterator(container);
+    auto outerEnd = __util::endIterator(container);
+    for (; outerIt != outerEnd; ++outerIt) {
+        auto it = __util::beginIterator(*outerIt);
+        auto end = __util::endIterator(*outerIt);
+        for (; it != end; ++it) {
+            if (predicate(*it))
+                __util::addToContainer(destination, *it);
+        }
+    }
+    return destination;
+}
+
+template<template<typename...> class Container1, template<typename...> class Container2, typename Input,
+         typename Predicate>
+Container1<Input> flatFilter(const Container1<Container2<Input>> &container, const Predicate &predicate)
+{
+    return flatFilter(container, predicate, Container1<Input>());
+}
 }
 }
 
