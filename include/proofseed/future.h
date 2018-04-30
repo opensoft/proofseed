@@ -13,6 +13,9 @@
 #include <QThread>
 #include <QString>
 #include <QTime>
+#include <QMutex>
+#include <QWaitCondition>
+#include <QCoreApplication>
 
 #include <list>
 
@@ -154,10 +157,43 @@ public:
 
     bool wait(long long timeout = -1) const
     {
-        QTime timer;
-        timer.start();
-        while (!completed() && (timeout < 0 || timer.elapsed() < timeout))
-            QThread::yieldCurrentThread();
+        auto self = m_weakSelf.toStrongRef();
+        Q_ASSERT(self);
+        if (completed())
+            return true;
+        bool waitForever = timeout < 1;
+        bool maintainEvents = QThread::currentThread() == qApp->thread();
+        if (maintainEvents || !waitForever) {
+            QTime timer;
+            timer.start();
+            while (waitForever || (timer.elapsed() <= timeout)) {
+                if (completed())
+                    return true;
+                if (maintainEvents)
+                    QCoreApplication::processEvents();
+                else
+                    QThread::msleep(1);
+            }
+        } else {
+            QMutex mutex;
+            QWaitCondition waiter;
+            mutex.lock();
+            bool wasInSameThread = false;
+            self->recover([](const Failure &) {
+                return T();
+            })->onSuccess([&waiter, &mutex, &wasInSameThread, waitingThread = QThread::currentThread()](const T &) {
+                if (QThread::currentThread() == waitingThread) {
+                    wasInSameThread = true;
+                    return;
+                }
+                mutex.lock();
+                mutex.unlock();
+                waiter.wakeAll();
+            });
+            if (!wasInSameThread)
+                waiter.wait(&mutex);
+            mutex.unlock();
+        }
         return completed();
     }
 
