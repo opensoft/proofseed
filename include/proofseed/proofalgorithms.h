@@ -390,9 +390,16 @@ auto flatten(const Container1<Container2<Input>> &container, Result destination)
 -> decltype(__util::addToContainer(destination, *(__util::beginIterator(*(__util::beginIterator(container))))),
             Result())
 {
+    long long estimatedSize = 0;
+    int estimationsLeft = 100;
     auto outerIt = __util::beginIterator(container);
     auto outerEnd = __util::endIterator(container);
-    for (; outerIt != outerEnd; ++outerIt) {
+    for (; outerIt != outerEnd && estimationsLeft; ++outerIt, --estimationsLeft)
+        estimatedSize += outerIt->size();
+    if (!estimationsLeft)
+        estimatedSize = (float)estimatedSize / 100.0 * container.size();
+    __util::reserveContainer(destination, estimatedSize + destination.size());
+    for (outerIt = __util::beginIterator(container); outerIt != outerEnd; ++outerIt) {
         auto it = __util::beginIterator(*outerIt);
         auto end = __util::endIterator(*outerIt);
         for (; it != end; ++it)
