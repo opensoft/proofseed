@@ -255,6 +255,51 @@ TEST(FutureTest, andThen)
     EXPECT_EQ(2, mappedFuture->result());
 }
 
+TEST(FutureTest, andThenValueR)
+{
+    PromiseSP<int> promise = PromiseSP<int>::create();
+    FutureSP<int> future = promise->future();
+    FutureSP<int> mappedFuture = future->andThenValue(2);
+    EXPECT_NE(future, mappedFuture);
+    promise->success(42);
+    EXPECT_EQ(42, future->result());
+    ASSERT_TRUE(mappedFuture->completed());
+    EXPECT_TRUE(mappedFuture->succeeded());
+    EXPECT_FALSE(mappedFuture->failed());
+    EXPECT_EQ(2, mappedFuture->result());
+}
+
+TEST(FutureTest, andThenValueL)
+{
+    PromiseSP<int> promise = PromiseSP<int>::create();
+    FutureSP<int> future = promise->future();
+    int result = 2;
+    FutureSP<int> mappedFuture = future->andThenValue(result);
+    EXPECT_NE(future, mappedFuture);
+    promise->success(42);
+    EXPECT_EQ(42, future->result());
+    ASSERT_TRUE(mappedFuture->completed());
+    EXPECT_TRUE(mappedFuture->succeeded());
+    EXPECT_FALSE(mappedFuture->failed());
+    EXPECT_EQ(2, mappedFuture->result());
+    EXPECT_EQ(2, result);
+}
+
+TEST(FutureTest, andThenValueCL)
+{
+    PromiseSP<int> promise = PromiseSP<int>::create();
+    FutureSP<int> future = promise->future();
+    const int result = 2;
+    FutureSP<int> mappedFuture = future->andThenValue(result);
+    EXPECT_NE(future, mappedFuture);
+    promise->success(42);
+    EXPECT_EQ(42, future->result());
+    ASSERT_TRUE(mappedFuture->completed());
+    EXPECT_TRUE(mappedFuture->succeeded());
+    EXPECT_FALSE(mappedFuture->failed());
+    EXPECT_EQ(2, mappedFuture->result());
+}
+
 TEST(FutureTest, differentTypeMap)
 {
     PromiseSP<int> promise = PromiseSP<int>::create();
@@ -303,6 +348,109 @@ TEST(FutureTest, differentTypeAndThen)
     EXPECT_TRUE(mappedFuture->succeeded());
     EXPECT_FALSE(mappedFuture->failed());
     EXPECT_DOUBLE_EQ(2.0, mappedFuture->result());
+}
+
+TEST(FutureTest, differentTypeAndThenValueR)
+{
+    PromiseSP<int> promise = PromiseSP<int>::create();
+    FutureSP<int> future = promise->future();
+    FutureSP<double> mappedFuture = future->andThenValue(2.0);
+    promise->success(42);
+    EXPECT_EQ(42, future->result());
+    ASSERT_TRUE(mappedFuture->completed());
+    EXPECT_TRUE(mappedFuture->succeeded());
+    EXPECT_FALSE(mappedFuture->failed());
+    EXPECT_DOUBLE_EQ(2.0, mappedFuture->result());
+}
+
+TEST(FutureTest, differentTypeAndThenValueL)
+{
+    PromiseSP<int> promise = PromiseSP<int>::create();
+    FutureSP<int> future = promise->future();
+    double result = 2.0;
+    FutureSP<double> mappedFuture = future->andThenValue(result);
+    promise->success(42);
+    EXPECT_EQ(42, future->result());
+    ASSERT_TRUE(mappedFuture->completed());
+    EXPECT_TRUE(mappedFuture->succeeded());
+    EXPECT_FALSE(mappedFuture->failed());
+    EXPECT_DOUBLE_EQ(2.0, mappedFuture->result());
+    EXPECT_DOUBLE_EQ(2.0, result);
+}
+
+TEST(FutureTest, differentTypeAndThenValueCL)
+{
+    PromiseSP<int> promise = PromiseSP<int>::create();
+    FutureSP<int> future = promise->future();
+    const double result = 2.0;
+    FutureSP<double> mappedFuture = future->andThenValue(result);
+    promise->success(42);
+    EXPECT_EQ(42, future->result());
+    ASSERT_TRUE(mappedFuture->completed());
+    EXPECT_TRUE(mappedFuture->succeeded());
+    EXPECT_FALSE(mappedFuture->failed());
+    EXPECT_DOUBLE_EQ(2.0, mappedFuture->result());
+}
+
+TEST(FutureTest, filterPositive)
+{
+    PromiseSP<int> promise = PromiseSP<int>::create();
+    FutureSP<int> future = promise->future();
+    FutureSP<int> filteredFuture = future->filter([](int x) -> bool {return x % 2;});
+    EXPECT_FALSE(filteredFuture->completed());
+    EXPECT_NE(future, filteredFuture);
+    promise->success(41);
+    EXPECT_EQ(41, future->result());
+    ASSERT_TRUE(filteredFuture->completed());
+    EXPECT_TRUE(filteredFuture->succeeded());
+    EXPECT_FALSE(filteredFuture->failed());
+    EXPECT_EQ(41, filteredFuture->result());
+}
+
+TEST(FutureTest, filterNegative)
+{
+    PromiseSP<int> promise = PromiseSP<int>::create();
+    FutureSP<int> future = promise->future();
+    FutureSP<int> filteredFuture = future->filter([](int x){return x % 2;});
+    EXPECT_FALSE(filteredFuture->completed());
+    EXPECT_NE(future, filteredFuture);
+    promise->success(42);
+    EXPECT_EQ(42, future->result());
+    ASSERT_TRUE(filteredFuture->completed());
+    EXPECT_FALSE(filteredFuture->succeeded());
+    EXPECT_TRUE(filteredFuture->failed());
+    EXPECT_EQ("Result wasn't good enough", filteredFuture->failureReason().message);
+}
+
+TEST(FutureTest, filterNegativeCustomRejectedR)
+{
+    PromiseSP<int> promise = PromiseSP<int>::create();
+    FutureSP<int> future = promise->future();
+    FutureSP<int> filteredFuture = future->filter([](int){return false;}, Failure("Custom", 0, 0));
+    EXPECT_FALSE(filteredFuture->completed());
+    EXPECT_NE(future, filteredFuture);
+    promise->success(42);
+    EXPECT_EQ(42, future->result());
+    ASSERT_TRUE(filteredFuture->completed());
+    EXPECT_FALSE(filteredFuture->succeeded());
+    EXPECT_TRUE(filteredFuture->failed());
+    EXPECT_EQ("Custom", filteredFuture->failureReason().message);
+}
+
+TEST(FutureTest, filterNegativeCustomRejectedL)
+{
+    PromiseSP<int> promise = PromiseSP<int>::create();
+    FutureSP<int> future = promise->future();
+    Failure rejected = Failure("Custom", 0, 0);
+    FutureSP<int> filteredFuture = future->filter([](int){return false;}, rejected);
+    EXPECT_FALSE(filteredFuture->completed());
+    EXPECT_NE(future, filteredFuture);
+    promise->success(42);
+    EXPECT_EQ(42, future->result());
+    ASSERT_TRUE(filteredFuture->completed());
+    EXPECT_FALSE(filteredFuture->succeeded());
+    EXPECT_TRUE(filteredFuture->failed());
+    EXPECT_EQ("Custom", filteredFuture->failureReason().message);
 }
 
 TEST(FutureTest, reduce)

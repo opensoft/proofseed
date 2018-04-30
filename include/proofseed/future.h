@@ -67,6 +67,7 @@ void PROOF_CORE_EXPORT setLastFailure(const Failure &failure);
 struct WithFailure
 {
     explicit WithFailure(const Failure &f) {m_failure = f;}
+    explicit WithFailure(Failure &&f) {m_failure = std::move(f);}
     template<typename ...Args>
     explicit WithFailure(const Args &...args) {m_failure = Failure(args...);}
     template<typename T> operator T()
@@ -110,9 +111,9 @@ public:
         m_future->fillFailure(reason);
     }
 
-    void success(T &&result)
+    void failure(Failure &&reason)
     {
-        m_future->fillSuccess(result);
+        m_future->fillFailure(reason);
     }
 
     void success(const T &result)
@@ -261,6 +262,21 @@ public:
     }
 
     template<typename Func>
+    auto filter(Func &&f, const Failure &rejected = Failure(QStringLiteral("Result wasn't good enough"), 0, 0))
+    -> decltype(!!f(T()), FutureSP<T>())
+    {
+        FutureSP<T> result = Future<T>::create();
+        onSuccess([result, f = std::forward<Func>(f), rejected = std::forward<const Failure>(rejected)](const T &v) {
+            if (f(v))
+                result->fillSuccess(v);
+            else
+                result->fillFailure(rejected);
+        });
+        onFailure([result](const Failure &failure) { result->fillFailure(failure); });
+        return result;
+    }
+
+    template<typename Func>
     auto map(Func &&f)
     -> decltype(FutureSP<decltype(f(T()))>())
     {
@@ -299,6 +315,15 @@ public:
         });
         onFailure([result](const Failure &failure) { result->fillFailure(failure); });
         return result;
+    }
+
+    template<typename T2,
+             typename Result = typename std::decay<T2>::type>
+    FutureSP<Result> andThenValue(T2 &&value)
+    {
+        return andThen([value = std::forward<T2>(value)]() {
+            return Future<Result>::successful(value);
+        });
     }
 
     template<typename Func, typename Result>
