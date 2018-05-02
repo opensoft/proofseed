@@ -350,6 +350,136 @@ TEST(AlgorithmsTest, findIfSet)
     EXPECT_EQ(5, result);
 }
 
+TEST(AlgorithmsTest, existsQList)
+{
+    QList<int> emptyContainer;
+    QList<int> testContainer = {1, 2, 3, 4, 5, 6, 7, 8, 9};
+
+    auto truePredicate = [](int x)->bool{return x % 2;};
+    auto falsePredicate = [](int x)->bool{return x > 42;};
+
+    EXPECT_FALSE(algorithms::exists(emptyContainer, truePredicate));
+    EXPECT_TRUE(algorithms::exists(testContainer, truePredicate));
+    EXPECT_FALSE(algorithms::exists(testContainer, falsePredicate));
+}
+
+TEST(AlgorithmsTest, existsQSet)
+{
+    QSet<int> emptyContainer;
+    QSet<int> testContainer = {1, 2, 3, 4, 5, 6, 7, 8, 9};
+
+    auto truePredicate = [](int x)->bool{return x % 2;};
+    auto falsePredicate = [](int x)->bool{return x > 42;};
+
+    EXPECT_FALSE(algorithms::exists(emptyContainer, truePredicate));
+    EXPECT_TRUE(algorithms::exists(testContainer, truePredicate));
+    EXPECT_FALSE(algorithms::exists(testContainer, falsePredicate));
+}
+
+TEST(AlgorithmsTest, existsQMap)
+{
+    QMap<int, bool> emptyContainer;
+    QMap<int, bool> testContainer = {{1, true}, {2, false}, {3, true}, {4, false}, {5, true}, {6, false}, {7, true}, {8, false}, {9, true}};
+
+    auto truePredicate = [](int, bool y)->bool{return y;};
+    auto falsePredicate = [](int x, bool)->bool{return x > 42;};
+
+    EXPECT_FALSE(algorithms::exists(emptyContainer, truePredicate));
+    EXPECT_TRUE(algorithms::exists(testContainer, truePredicate));
+    EXPECT_FALSE(algorithms::exists(testContainer, falsePredicate));
+}
+
+TEST(AlgorithmsTest, existsVector)
+{
+    std::vector<int> emptyContainer;
+    std::vector<int> testContainer = {1, 2, 3, 4, 5, 6, 7, 8, 9};
+
+    auto truePredicate = [](int x)->bool{return x % 2;};
+    auto falsePredicate = [](int x)->bool{return x > 42;};
+
+    EXPECT_FALSE(algorithms::exists(emptyContainer, truePredicate));
+    EXPECT_TRUE(algorithms::exists(testContainer, truePredicate));
+    EXPECT_FALSE(algorithms::exists(testContainer, falsePredicate));
+}
+
+TEST(AlgorithmsTest, existsSet)
+{
+    std::set<int> emptyContainer;
+    std::set<int> testContainer = {1, 2, 3, 4, 5, 6, 7, 8, 9};
+
+    auto truePredicate = [](int x)->bool{return x % 2;};
+    auto falsePredicate = [](int x)->bool{return x > 42;};
+
+    EXPECT_FALSE(algorithms::exists(emptyContainer, truePredicate));
+    EXPECT_TRUE(algorithms::exists(testContainer, truePredicate));
+    EXPECT_FALSE(algorithms::exists(testContainer, falsePredicate));
+}
+
+TEST(AlgorithmsTest, forAllQList)
+{
+    QList<int> emptyContainer;
+    QList<int> testContainer = {1, 2, 3, 4, 5, 6, 7, 8, 9};
+
+    auto truePredicate = [](int x)->bool{return x < 42;};
+    auto falsePredicate = [](int x)->bool{return x == 5;};
+
+    EXPECT_TRUE(algorithms::forAll(emptyContainer, truePredicate));
+    EXPECT_TRUE(algorithms::forAll(testContainer, truePredicate));
+    EXPECT_FALSE(algorithms::forAll(testContainer, falsePredicate));
+}
+
+TEST(AlgorithmsTest, forAllQSet)
+{
+    QSet<int> emptyContainer;
+    QSet<int> testContainer = {1, 2, 3, 4, 5, 6, 7, 8, 9};
+
+    auto truePredicate = [](int x)->bool{return x < 42;};
+    auto falsePredicate = [](int x)->bool{return x == 5;};
+
+    EXPECT_TRUE(algorithms::forAll(emptyContainer, truePredicate));
+    EXPECT_TRUE(algorithms::forAll(testContainer, truePredicate));
+    EXPECT_FALSE(algorithms::forAll(testContainer, falsePredicate));
+}
+
+TEST(AlgorithmsTest, forAllQMap)
+{
+    QMap<int, bool> emptyContainer;
+    QMap<int, bool> testContainer = {{1, true}, {2, false}, {3, true}, {4, false}, {5, true}, {6, false}, {7, true}, {8, false}, {9, true}};
+
+    auto truePredicate = [](int x, bool)->bool{return x < 42;};
+    auto falsePredicate = [](int, bool y)->bool{return y;};
+
+    EXPECT_TRUE(algorithms::forAll(emptyContainer, truePredicate));
+    EXPECT_TRUE(algorithms::forAll(testContainer, truePredicate));
+    EXPECT_FALSE(algorithms::forAll(testContainer, falsePredicate));
+}
+
+TEST(AlgorithmsTest, forAllVector)
+{
+    std::vector<int> emptyContainer;
+    std::vector<int> testContainer = {1, 2, 3, 4, 5, 6, 7, 8, 9};
+
+    auto truePredicate = [](int x)->bool{return x < 42;};
+    auto falsePredicate = [](int x)->bool{return x == 5;};
+
+    EXPECT_TRUE(algorithms::forAll(emptyContainer, truePredicate));
+    EXPECT_TRUE(algorithms::forAll(testContainer, truePredicate));
+    EXPECT_FALSE(algorithms::forAll(testContainer, falsePredicate));
+}
+
+TEST(AlgorithmsTest, forAllSet)
+{
+    std::set<int> emptyContainer;
+    std::set<int> testContainer = {1, 2, 3, 4, 5, 6, 7, 8, 9};
+
+    auto truePredicate = [](int x)->bool{return x < 42;};
+    auto falsePredicate = [](int x)->bool{return x == 5;};
+
+    EXPECT_TRUE(algorithms::forAll(emptyContainer, truePredicate));
+    EXPECT_TRUE(algorithms::forAll(testContainer, truePredicate));
+    EXPECT_FALSE(algorithms::forAll(testContainer, falsePredicate));
+}
+
 TEST(AlgorithmsTest, filterQList)
 {
     QList<int> emptyContainer;

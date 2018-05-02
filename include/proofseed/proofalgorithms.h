@@ -159,6 +159,62 @@ auto findIf(const Container &container, const Predicate &predicate, const Result
     return defaultValue;
 }
 
+template<typename Container, typename Predicate>
+auto exists(const Container &container, const Predicate &predicate)
+-> decltype(predicate(*(__util::beginIterator(container))),
+            bool())
+{
+    auto it = __util::beginIterator(container);
+    auto end = __util::endIterator(container);
+    for (; it != end; ++it) {
+        if (predicate(*it))
+            return true;
+    }
+    return false;
+}
+
+template<typename Container, typename Predicate>
+auto exists(const Container &container, const Predicate &predicate)
+-> decltype(predicate(__util::beginIterator(container).key(), __util::beginIterator(container).value()),
+            bool())
+{
+    auto it = __util::beginIterator(container);
+    auto end = __util::endIterator(container);
+    for (; it != end; ++it) {
+        if (predicate(it.key(), it.value()))
+            return true;
+    }
+    return false;
+}
+
+template<typename Container, typename Predicate>
+auto forAll(const Container &container, const Predicate &predicate)
+-> decltype(predicate(*(__util::beginIterator(container))),
+            bool())
+{
+    auto it = __util::beginIterator(container);
+    auto end = __util::endIterator(container);
+    for (; it != end; ++it) {
+        if (!predicate(*it))
+            return false;
+    }
+    return true;
+}
+
+template<typename Container, typename Predicate>
+auto forAll(const Container &container, const Predicate &predicate)
+-> decltype(predicate(__util::beginIterator(container).key(), __util::beginIterator(container).value()),
+            bool())
+{
+    auto it = __util::beginIterator(container);
+    auto end = __util::endIterator(container);
+    for (; it != end; ++it) {
+        if (!predicate(it.key(), it.value()))
+            return false;
+    }
+    return true;
+}
+
 template<typename Container, typename Predicate,
          typename = typename std::enable_if_t<!Proof::__util::HasTypeParams<Container>::value>>
 auto forEach(const Container &container, const Predicate &predicate)
