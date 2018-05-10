@@ -36,6 +36,7 @@ TEST(TasksTest, capacities)
     EXPECT_NE(2, dispatcher->restrictorCapacity(RestrictionType::Custom, "some_unique_restrictor_2"));
     dispatcher->addCustomRestrictor("some_unique_restrictor_2", 2);
     EXPECT_EQ(2, dispatcher->restrictorCapacity(RestrictionType::Custom, "some_unique_restrictor_2"));
+    EXPECT_EQ(1, dispatcher->restrictorCapacity(RestrictionType::ThreadBound));
 }
 
 TEST(TasksTest, singleTask)
@@ -703,4 +704,139 @@ TEST(TasksTest, mappedTaskWithFailure)
     ASSERT_TRUE(mappedFuture->failed());
     EXPECT_EQ(0, mappedFuture->result());
     EXPECT_EQ(42, mappedFuture->failureReason().data);
+}
+
+TEST(TasksTest, threadBinding)
+{
+    std::atomic_bool firstCanStart {false};
+    std::atomic_bool secondStarted {false};
+
+    auto first = [&firstCanStart]() {
+        while (!firstCanStart);
+        return pairedResult(1);
+    };
+
+    auto second = [&secondStarted]() {
+        secondStarted = true;
+        return pairedResult(1);
+    };
+
+    auto firstResult = run(first, RestrictionType::ThreadBound, "my");
+    auto secondResult = run(second, RestrictionType::ThreadBound, "my");
+    EXPECT_FALSE(firstResult->completed());
+    EXPECT_FALSE(secondResult->completed());
+    EXPECT_FALSE(secondStarted);
+    firstCanStart = true;
+    firstResult->wait();
+    secondResult->wait();
+    EXPECT_TRUE(secondStarted);
+    EXPECT_NE(currentThread(), firstResult->result().first);
+    EXPECT_NE(currentThread(), secondResult->result().first);
+    EXPECT_EQ(secondResult->result().first, firstResult->result().first);
+}
+
+TEST(TasksTest, threadBindingToDifferentKeys)
+{
+    auto task = []() {
+        return pairedResult(1);
+    };
+
+    QList<FutureSP<Result<int>>> firstResults;
+    QList<FutureSP<Result<int>>> secondResults;
+    int n = TasksDispatcher::instance()->capacity() * 2;
+    for (int i = 0; i < n; ++i) {
+        firstResults << run(task, RestrictionType::ThreadBound, "my1");
+        secondResults << run(task, RestrictionType::ThreadBound, "my2");
+    }
+
+    unsigned long long firstThread = 0ull;
+    unsigned long long secondThread = 0ull;
+    for (const auto &r : firstResults) {
+        r->wait();
+        if (!firstThread)
+            firstThread = r->result().first;
+        EXPECT_NE(currentThread(), r->result().first);
+        EXPECT_EQ(firstThread, r->result().first);
+    }
+    for (const auto &r : secondResults) {
+        r->wait();
+        if (!secondThread)
+            secondThread = r->result().first;
+        EXPECT_NE(currentThread(), r->result().first);
+        EXPECT_EQ(secondThread, r->result().first);
+    }
+    EXPECT_NE(firstThread, secondThread);
+}
+
+TEST(TasksTest, threadBindingAmongNormalTasks)
+{
+    auto task = []() {
+        return pairedResult(1);
+    };
+
+    QList<FutureSP<Result<int>>> boundResults;
+    QList<FutureSP<Result<int>>> otherResults;
+    int n = TasksDispatcher::instance()->capacity() * 10;
+    for (int i = 0; i < n; ++i) {
+        if (i % 5)
+            otherResults << run(task);
+        else
+            boundResults << run(task, RestrictionType::ThreadBound, "my3");
+    }
+
+    EXPECT_NE(0, boundResults.count());
+    EXPECT_NE(0, otherResults.count());
+    unsigned long long boundThread = 0ull;
+    for (const auto &r : boundResults) {
+        r->wait();
+        if (!boundThread)
+            boundThread = r->result().first;
+        EXPECT_NE(currentThread(), r->result().first);
+        EXPECT_EQ(boundThread, r->result().first);
+    }
+    for (const auto &r : otherResults)
+        r->wait();
+}
+
+TEST(TasksTest, threadBindingToDifferentKeysAmongOtherTasks)
+{
+    auto task = []() {
+        return pairedResult(1);
+    };
+
+    QList<FutureSP<Result<int>>> firstResults;
+    QList<FutureSP<Result<int>>> secondResults;
+    QList<FutureSP<Result<int>>> otherResults;
+    int n = TasksDispatcher::instance()->capacity() * 20;
+    for (int i = 0; i < n; ++i) {
+        if (i % 5)
+            otherResults << run(task);
+        else if (i % 10)
+            firstResults << run(task, RestrictionType::ThreadBound, "my4");
+        else
+            secondResults << run(task, RestrictionType::ThreadBound, "my5");
+    }
+
+    EXPECT_NE(0, firstResults.count());
+    EXPECT_NE(0, secondResults.count());
+    EXPECT_NE(0, otherResults.count());
+    unsigned long long firstThread = 0ull;
+    unsigned long long secondThread = 0ull;
+    for (const auto &r : firstResults) {
+        r->wait();
+        if (!firstThread)
+            firstThread = r->result().first;
+        EXPECT_NE(currentThread(), r->result().first);
+        EXPECT_EQ(firstThread, r->result().first);
+    }
+    for (const auto &r : secondResults) {
+        r->wait();
+        if (!secondThread)
+            secondThread = r->result().first;
+        EXPECT_NE(currentThread(), r->result().first);
+        EXPECT_EQ(secondThread, r->result().first);
+    }
+    EXPECT_NE(firstThread, secondThread);
+    for (const auto &r : otherResults)
+        r->wait();
 }
