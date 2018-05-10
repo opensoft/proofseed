@@ -128,6 +128,32 @@ template<typename T> using PromiseSP = QSharedPointer<Promise<T>>;
 template<typename T> using PromiseWP = QWeakPointer<Promise<T>>;
 
 template<typename T>
+class CancelableFuture
+{
+public:
+    using Type = T;
+    using element_type = T;
+    using value_type = T;
+    explicit CancelableFuture() {m_promise = PromiseSP<T>::create();}
+    explicit CancelableFuture(const PromiseSP<T> &promise) {m_promise = promise;}
+    void cancel() const
+    {
+        if (!m_promise->filled())
+            m_promise->failure(Failure("Canceled", 0, 0));
+    }
+    Future<T> *operator->() const
+    {
+        return m_promise->future().data();
+    }
+    operator FutureSP<T>() const
+    {
+        return m_promise->future();
+    }
+private:
+    PromiseSP<T> m_promise;
+};
+
+template<typename T>
 class Future
 {
     template<typename U> friend class Future;
@@ -266,7 +292,7 @@ public:
     -> decltype(!!f(T()), FutureSP<T>())
     {
         FutureSP<T> result = Future<T>::create();
-        onSuccess([result, f = std::forward<Func>(f), rejected = std::forward<const Failure>(rejected)](const T &v) {
+        onSuccess([result, f = std::forward<Func>(f), rejected](const T &v) {
             if (f(v))
                 result->fillSuccess(v);
             else
@@ -438,7 +464,11 @@ private:
         }
 
         m_mainLock.lock();
-        Q_ASSERT_X(!completed(), "Future::fillSuccess", "Can't fill one future twice");
+        if (completed()) {
+            qCDebug(proofCoreFuturesLog) << "Trying to fill same future twice. Nothing happens";
+            m_mainLock.unlock();
+            return;
+        }
         m_result = result;
         m_state.store(SucceededFuture, std::memory_order_release);
         for (const auto &f : m_successCallbacks)
@@ -451,7 +481,11 @@ private:
     void fillFailure(const Failure &reason)
     {
         m_mainLock.lock();
-        Q_ASSERT_X(!completed(), "Future::fillFailure", "Can't fill one future twice");
+        if (completed()) {
+            qCDebug(proofCoreFuturesLog) << "Trying to fill same future twice. Nothing happens";
+            m_mainLock.unlock();
+            return;
+        }
         m_failureReason = reason;
         m_state.store(FailedFuture, std::memory_order_release);
         for (const auto &f : m_failureCallbacks)
@@ -483,7 +517,7 @@ private:
             }
         }
         auto currentFuture = *current;
-        currentFuture->onSuccess(sequenceSuccessListenerGenerator(std::move(initial), current, std::forward<Container<T>>(result), promise));
+        currentFuture->onSuccess(sequenceSuccessListenerGenerator(std::move(initial), current, std::move(result), promise));
         currentFuture->onFailure([promise](const Failure &reason) {promise->failure(reason);});
     }
 
@@ -491,7 +525,7 @@ private:
     static std::function<void(const T&)> sequenceSuccessListenerGenerator(Container<FutureSP<T>> &&initial, It current,
                                                                           Container<T> &&result, const PromiseSP<Container<T>> &promise)
     {
-        return [initial = std::move(initial), current, result = std::forward<Container<T>>(result), promise](const T &v) mutable {
+        return [initial = std::move(initial), current, result = std::move(result), promise](const T &v) mutable {
             ++current;
             result << v;
             if (current == initial.cend())
@@ -517,4 +551,5 @@ private:
     FutureWP<T> m_weakSelf;
 };
 }
+
 #endif // PROOF_FUTURE_H

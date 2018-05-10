@@ -31,9 +31,7 @@ TEST(TasksTest, capacities)
 {
     auto dispatcher = TasksDispatcher::instance();
     EXPECT_GE(dispatcher->capacity(), dispatcher->restrictorCapacity(RestrictionType::Intensive));
-    EXPECT_GE(dispatcher->capacity(), dispatcher->restrictorCapacity(RestrictionType::Http, "some_unique_restrictor"));
     EXPECT_GE(dispatcher->capacity(), dispatcher->restrictorCapacity(RestrictionType::Custom, "some_unique_restrictor"));
-    EXPECT_EQ(dispatcher->capacity(), dispatcher->restrictorCapacity(RestrictionType::Http));
     EXPECT_EQ(dispatcher->capacity(), dispatcher->restrictorCapacity(RestrictionType::Custom));
     EXPECT_NE(2, dispatcher->restrictorCapacity(RestrictionType::Custom, "some_unique_restrictor_2"));
     dispatcher->addCustomRestrictor("some_unique_restrictor_2", 2);
@@ -74,6 +72,73 @@ TEST(TasksTest, singleVoidTask)
     EXPECT_FALSE(result->failed());
     EXPECT_EQ(true, result->result());
     EXPECT_EQ(true, flag);
+}
+
+TEST(TasksTest, taskCancelation)
+{
+    tasks::TasksDispatcher::instance()->addCustomRestrictor("single", 1);
+    PromiseSP<int> blockingPromise = PromiseSP<int>::create();
+    run([blockingPromise]() {return blockingPromise->future();}, RestrictionType::Custom, "single");
+    std::atomic_bool executed {false};
+    CancelableFuture<int> f = run([&executed](){executed = true; return 42;}, RestrictionType::Custom, "single");
+    CancelableFuture<int> f2 = run([](){return 42;}, RestrictionType::Custom, "single");
+    f.cancel();
+    blockingPromise->success(1);
+    f->wait(1000);
+    ASSERT_TRUE(f->completed());
+    f2->wait(1000);
+    ASSERT_TRUE(f2->completed());
+    EXPECT_EQ(42, f2->result());
+
+    EXPECT_FALSE(executed);
+    EXPECT_FALSE(f->succeeded());
+    EXPECT_TRUE(f->failed());
+    EXPECT_EQ("Canceled", f->failureReason().message);
+}
+
+TEST(TasksTest, deferedTaskCancelation)
+{
+    tasks::TasksDispatcher::instance()->addCustomRestrictor("single", 1);
+    PromiseSP<int> blockingPromise = PromiseSP<int>::create();
+    run([blockingPromise]() {return blockingPromise->future();}, RestrictionType::Custom, "single");
+    std::atomic_bool executed {false};
+    PromiseSP<int> innerPromise = PromiseSP<int>::create();
+    CancelableFuture<int> f = run([innerPromise, &executed]() {executed = true; return innerPromise->future();}, RestrictionType::Custom, "single");
+    CancelableFuture<int> f2 = run([](){return 42;}, RestrictionType::Custom, "single");
+    f.cancel();
+    blockingPromise->success(1);
+    f->wait(1000);
+    ASSERT_TRUE(f->completed());
+    f2->wait(1000);
+    ASSERT_TRUE(f2->completed());
+    EXPECT_EQ(42, f2->result());
+
+    EXPECT_FALSE(executed);
+    EXPECT_FALSE(f->succeeded());
+    EXPECT_TRUE(f->failed());
+    EXPECT_EQ("Canceled", f->failureReason().message);
+}
+
+TEST(TasksTest, voidTaskCancelation)
+{
+    tasks::TasksDispatcher::instance()->addCustomRestrictor("single", 1);
+    PromiseSP<int> blockingPromise = PromiseSP<int>::create();
+    run([blockingPromise]() {return blockingPromise->future();}, RestrictionType::Custom, "single");
+    std::atomic_bool executed {false};
+    CancelableFuture<bool> f = run([&executed](){executed = true; return;}, RestrictionType::Custom, "single");
+    CancelableFuture<int> f2 = run([](){return 42;}, RestrictionType::Custom, "single");
+    f.cancel();
+    blockingPromise->success(1);
+    f->wait(1000);
+    ASSERT_TRUE(f->completed());
+    f2->wait(1000);
+    ASSERT_TRUE(f2->completed());
+    EXPECT_EQ(42, f2->result());
+
+    EXPECT_FALSE(executed);
+    EXPECT_FALSE(f->succeeded());
+    EXPECT_TRUE(f->failed());
+    EXPECT_EQ("Canceled", f->failureReason().message);
 }
 
 TEST(TasksTest, singleDeferredTaskWithFailure)
@@ -141,43 +206,6 @@ TEST(TasksTest, multipleTasksOverCapacity)
         EXPECT_EQ(i * 2, results[i]->result());
 }
 
-TEST(TasksTest, multipleHttpTasksOverCapacity)
-{
-    std::atomic_bool ready {false};
-    std::atomic_int runCounter {0};
-    std::atomic_int otherRunCounter {0};
-    int capacity = TasksDispatcher::instance()->restrictorCapacity(RestrictionType::Http, "test");
-    int n = capacity * 2;
-    QList<FutureSP<int>> results;
-    QList<FutureSP<int>> otherResults;
-    for (int i = 0; i < n; ++i) {
-        results << run([&ready, &runCounter, i](){
-            ++runCounter;
-            while (!ready);
-            return i * 2;
-        }, RestrictionType::Http, "test");
-        otherResults << run([&ready, &otherRunCounter, i](){
-            ++otherRunCounter;
-            while (!ready);
-            return i * 3;
-        }, RestrictionType::Http, "other");
-    }
-    QTime timeout;
-    timeout.start();
-    while ((runCounter < capacity || otherRunCounter < capacity) && timeout.elapsed() < 5000);
-    QThread::msleep(25);
-    EXPECT_EQ(capacity, runCounter);
-    EXPECT_EQ(capacity, otherRunCounter);
-    for (int i = 0; i < n; ++i) {
-        EXPECT_FALSE(results[i]->completed());
-        EXPECT_FALSE(otherResults[i]->completed());
-    }
-    ready = true;
-    for (int i = 0; i < n; ++i) {
-        EXPECT_EQ(i * 2, results[i]->result());
-        EXPECT_EQ(i * 3, otherResults[i]->result());
-    }
-}
 
 TEST(TasksTest, multipleIntensiveTasksOverCapacity)
 {

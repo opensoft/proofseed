@@ -70,11 +70,11 @@ protected:
     void run() override;
 private:
     qint32 id = 0;
-    std::experimental::optional<TaskInfo> nextTask;
-    QMutex taskLock;
     std::atomic_bool poisoned {false};
     std::atomic_bool asleep {false};
+    std::experimental::optional<TaskInfo> nextTask;
     QWaitCondition waiter;
+    QMutex taskLock;
 };
 
 }

@@ -43,25 +43,29 @@ public:
     template<typename Task,
              typename Result = typename std::result_of_t<Task()>,
              typename = typename std::enable_if_t<!std::is_same<Result, void>::value && !__util::IsSpecialization2<Result, QSharedPointer, Future>::value>>
-    FutureSP<Result> run(Task &&task, RestrictionType restrictionType, const QString &restrictor)
+    CancelableFuture<Result> run(Task &&task, RestrictionType restrictionType, const QString &restrictor)
     {
         PromiseSP<Result> promise = PromiseSP<Result>::create();
         std::function<void()> f = [promise, task = std::forward<Task>(task)]() {
+            if (promise->filled())
+                return;
             Proof::futures::__util::resetLastFailure();
             promise->success(task());
         };
         insertTaskInfo(std::move(f), restrictionType, restrictor);
-        return promise->future();
+        return CancelableFuture<Result>(promise);
     }
 
     template<typename Task,
              typename Result = typename std::result_of_t<Task()>,
              typename InnerResult = typename std::decay<decltype(*Result().data())>::type::Value,
              typename = typename std::enable_if_t<__util::IsSpecialization2<Result, QSharedPointer, Future>::value>>
-    Result run(Task &&task, RestrictionType restrictionType, const QString &restrictor)
+    CancelableFuture<InnerResult> run(Task &&task, RestrictionType restrictionType, const QString &restrictor)
     {
         PromiseSP<InnerResult> promise = PromiseSP<InnerResult>::create();
         std::function<void()> f = [promise, task = std::forward<Task>(task)]() {
+            if (promise->filled())
+                return;
             Proof::futures::__util::resetLastFailure();
             task()->onSuccess([promise](const InnerResult &result) {
                 promise->success(result);
@@ -70,22 +74,24 @@ public:
             });
         };
         insertTaskInfo(std::move(f), restrictionType, restrictor);
-        return promise->future();
+        return CancelableFuture<InnerResult>(promise);
     }
 
     template<typename Task,
              typename Result = typename std::result_of_t<Task()>,
              typename = typename std::enable_if_t<std::is_same<Result, void>::value>>
-    FutureSP<bool> run(Task &&task, RestrictionType restrictionType, const QString &restrictor)
+    CancelableFuture<bool> run(Task &&task, RestrictionType restrictionType, const QString &restrictor)
     {
         PromiseSP<bool> promise = PromiseSP<bool>::create();
         std::function<void()> f = [promise, task = std::forward<Task>(task)]() {
+            if (promise->filled())
+                return;
             Proof::futures::__util::resetLastFailure();
             task();
             promise->success(true);
         };
         insertTaskInfo(std::move(f), restrictionType, restrictor);
-        return promise->future();
+        return CancelableFuture<bool>(promise);
     }
 
     template<class SignalSender, class SignalType, class ...Args>
@@ -144,7 +150,7 @@ auto run(const Container<Input> &data, Task &&task,
 {
     if (!data.size())
         return Future<Container<Output>>::successful();
-    auto seq = algorithms::map(data, [task = std::forward<Task>(task), restrictionType, restrictor](const Input &x) {
+    auto seq = algorithms::map(data, [task = std::forward<Task>(task), restrictionType, restrictor](const Input &x) -> FutureSP<Output> {
         return run([x, task]() -> Output {return task(x);}, restrictionType, restrictor);
     });
     return Future<Output>::sequence(seq);
@@ -161,7 +167,7 @@ auto run(const Container<Input> &data, Task &&task,
 {
     if (!data.size())
         return Future<Container<OutputValue>>::successful();
-    auto seq = algorithms::map(data, [task = std::forward<Task>(task), restrictionType, restrictor](const Input &x) {
+    auto seq = algorithms::map(data, [task = std::forward<Task>(task), restrictionType, restrictor](const Input &x) -> Output {
         return run([x, task]() -> Output {return task(x);}, restrictionType, restrictor);
     });
     return Future<OutputValue>::sequence(seq);
@@ -177,7 +183,7 @@ auto run(const Container<Input> &data, Task &&task,
 {
     if (!data.size())
         return Future<bool>::successful(true);
-    auto seq = algorithms::map(data, [task = std::forward<Task>(task), restrictionType, restrictor](const Input &x) {
+    auto seq = algorithms::map(data, [task = std::forward<Task>(task), restrictionType, restrictor](const Input &x) -> FutureSP<bool> {
         return run([x, task]() {task(x);}, restrictionType, restrictor);
     });
     return Future<bool>::sequence(seq)->map([](const auto &){return true;});
@@ -193,7 +199,7 @@ auto run(const Container<Input> &data, Task &&task,
 {
     if (!data.size())
         return Future<Container<Output>>::successful();
-    auto seq = algorithms::map(data, [task = std::forward<Task>(task), restrictionType, restrictor](long long index, const Input &x) {
+    auto seq = algorithms::map(data, [task = std::forward<Task>(task), restrictionType, restrictor](long long index, const Input &x) -> FutureSP<Output> {
         return run([index, x, task]() -> Output {return task(index, x);}, restrictionType, restrictor);
     });
     return Future<Output>::sequence(seq);
@@ -210,7 +216,7 @@ auto run(const Container<Input> &data, Task &&task,
 {
     if (!data.size())
         return Future<Container<OutputValue>>::successful();
-    auto seq = algorithms::map(data, [task = std::forward<Task>(task), restrictionType, restrictor](long long index, const Input &x) {
+    auto seq = algorithms::map(data, [task = std::forward<Task>(task), restrictionType, restrictor](long long index, const Input &x) -> Output {
         return run([index, x, task]() -> Output {return task(index, x);}, restrictionType, restrictor);
     });
     return Future<OutputValue>::sequence(seq);
@@ -226,7 +232,7 @@ auto run(const Container<Input> &data, Task &&task,
 {
     if (!data.size())
         return Future<bool>::successful(true);
-    auto seq = algorithms::map(data, [task = std::forward<Task>(task), restrictionType, restrictor](long long index, const Input &x) {
+    auto seq = algorithms::map(data, [task = std::forward<Task>(task), restrictionType, restrictor](long long index, const Input &x) -> FutureSP<bool> {
         return run([index, x, task]() {task(index, x);}, restrictionType, restrictor);
     });
     return Future<bool>::sequence(seq)->map([](const auto &){return true;});
@@ -261,9 +267,9 @@ auto clusteredRun(const Container<Input> &data, Task &&task, qint64 minClusterSi
                     result[i] = task(data[i]);
             });
         }
-        for (const auto &future : futures)
+        for (const auto &future : qAsConst(futures))
             future->wait();
-        for (const auto &future : futures) {
+        for (const auto &future : qAsConst(futures)) {
             if (future->failed())
                 return WithFailure(future->failureReason());
         }

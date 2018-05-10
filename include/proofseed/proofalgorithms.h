@@ -372,7 +372,7 @@ auto map(const Container<Input> &container, const Predicate &predicate, Result d
     return destination;
 }
 
-//Double socketed type
+//Double socketed Qt type
 template<template<typename...> class Container, typename InputKey, typename InputValue,
          typename Predicate, typename Result>
 auto map(const Container<InputKey, InputValue> &container, const Predicate &predicate, Result destination)
@@ -384,6 +384,21 @@ auto map(const Container<InputKey, InputValue> &container, const Predicate &pred
     __util::reserveContainer(destination, container.size());
     for (; it != end; ++it)
         __util::addToContainer(destination, predicate(it.key(), it.value()));
+    return destination;
+}
+
+//Double socketed stl type
+template<template<typename...> class Container, typename InputKey, typename InputValue,
+         typename Predicate, typename Result>
+auto map(const Container<InputKey, InputValue> &container, const Predicate &predicate, Result destination)
+-> decltype(__util::addToContainer(destination, predicate(__util::beginIterator(container)->first, __util::beginIterator(container)->second)),
+            Result())
+{
+    auto it = __util::beginIterator(container);
+    auto end = __util::endIterator(container);
+    __util::reserveContainer(destination, container.size());
+    for (; it != end; ++it)
+        __util::addToContainer(destination, predicate(it->first, it->second));
     return destination;
 }
 

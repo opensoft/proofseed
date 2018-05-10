@@ -61,6 +61,25 @@ TEST(FutureTest, failure)
     EXPECT_EQ(Failure::UserFriendlyHint, future->failureReason().hints);
 }
 
+TEST(FutureTest, cancelation)
+{
+    PromiseSP<int> promise = PromiseSP<int>::create();
+    CancelableFuture<int> future(promise);
+    EXPECT_FALSE(future->completed());
+    future.cancel();
+    ASSERT_TRUE(future->completed());
+    EXPECT_FALSE(future->succeeded());
+    EXPECT_TRUE(future->failed());
+    EXPECT_TRUE(future->failureReason().exists);
+    EXPECT_EQ("Canceled", future->failureReason().message);
+    promise->success(42);
+    ASSERT_TRUE(future->completed());
+    EXPECT_FALSE(future->succeeded());
+    EXPECT_TRUE(future->failed());
+    EXPECT_TRUE(future->failureReason().exists);
+    EXPECT_EQ("Canceled", future->failureReason().message);
+}
+
 TEST(FutureTest, withFailure)
 {
     PromiseSP<int> promise = PromiseSP<int>::create();
