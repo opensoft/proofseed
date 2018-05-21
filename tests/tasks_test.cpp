@@ -79,7 +79,7 @@ TEST(TasksTest, taskCancelation)
 {
     tasks::TasksDispatcher::instance()->addCustomRestrictor("single", 1);
     PromiseSP<int> blockingPromise = PromiseSP<int>::create();
-    run([blockingPromise]() {return blockingPromise->future();}, RestrictionType::Custom, "single");
+    run([blockingPromise]() {blockingPromise->future()->wait();}, RestrictionType::Custom, "single");
     std::atomic_bool executed {false};
     CancelableFuture<int> f = run([&executed](){executed = true; return 42;}, RestrictionType::Custom, "single");
     CancelableFuture<int> f2 = run([](){return 42;}, RestrictionType::Custom, "single");
@@ -101,7 +101,7 @@ TEST(TasksTest, deferedTaskCancelation)
 {
     tasks::TasksDispatcher::instance()->addCustomRestrictor("single", 1);
     PromiseSP<int> blockingPromise = PromiseSP<int>::create();
-    run([blockingPromise]() {return blockingPromise->future();}, RestrictionType::Custom, "single");
+    run([blockingPromise]() {return blockingPromise->future()->wait();}, RestrictionType::Custom, "single");
     std::atomic_bool executed {false};
     PromiseSP<int> innerPromise = PromiseSP<int>::create();
     CancelableFuture<int> f = run([innerPromise, &executed]() {executed = true; return innerPromise->future();}, RestrictionType::Custom, "single");
@@ -124,9 +124,9 @@ TEST(TasksTest, voidTaskCancelation)
 {
     tasks::TasksDispatcher::instance()->addCustomRestrictor("single", 1);
     PromiseSP<int> blockingPromise = PromiseSP<int>::create();
-    run([blockingPromise]() {return blockingPromise->future();}, RestrictionType::Custom, "single");
+    run([blockingPromise]() {return blockingPromise->future()->wait();}, RestrictionType::Custom, "single");
     std::atomic_bool executed {false};
-    CancelableFuture<bool> f = run([&executed](){executed = true; return;}, RestrictionType::Custom, "single");
+    CancelableFuture<bool> f = run([&executed](){executed = true;}, RestrictionType::Custom, "single");
     CancelableFuture<int> f2 = run([](){return 42;}, RestrictionType::Custom, "single");
     f.cancel();
     blockingPromise->success(1);

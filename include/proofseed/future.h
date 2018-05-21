@@ -49,7 +49,7 @@ struct Failure
 };
 
 namespace futures {
-namespace __util {
+namespace detail {
 bool PROOF_CORE_EXPORT hasLastFailure();
 Failure PROOF_CORE_EXPORT lastFailure();
 void PROOF_CORE_EXPORT resetLastFailure();
@@ -72,7 +72,7 @@ struct WithFailure
     explicit WithFailure(const Args &...args) {m_failure = Failure(args...);}
     template<typename T> operator T()
     {
-        futures::__util::setLastFailure(std::move(m_failure));
+        futures::detail::setLastFailure(std::move(m_failure));
         return T();
     }
     template<typename T> operator FutureSP<T>()
@@ -136,16 +136,20 @@ public:
     using value_type = T;
     explicit CancelableFuture() {m_promise = PromiseSP<T>::create();}
     explicit CancelableFuture(const PromiseSP<T> &promise) {m_promise = promise;}
-    void cancel() const
+    void cancel(const Failure &failure = Failure("Canceled", 0, 0)) const
     {
         if (!m_promise->filled())
-            m_promise->failure(Failure("Canceled", 0, 0));
+            m_promise->failure(failure);
     }
     Future<T> *operator->() const
     {
         return m_promise->future().data();
     }
     operator FutureSP<T>() const
+    {
+        return m_promise->future();
+    }
+    FutureSP<T> future() const
     {
         return m_promise->future();
     }
@@ -343,13 +347,10 @@ public:
         return result;
     }
 
-    template<typename T2,
-             typename Result = typename std::decay<T2>::type>
+    template<typename T2, typename Result = typename std::decay<T2>::type>
     FutureSP<Result> andThenValue(T2 &&value)
     {
-        return andThen([value = std::forward<T2>(value)]() {
-            return Future<Result>::successful(value);
-        });
+        return map([value = std::forward<T2>(value)](const auto &) {return value;});
     }
 
     template<typename Func, typename Result>
@@ -388,13 +389,13 @@ public:
 
     //TODO: think about better approach for zip. TupleMaker seems a bit sloppy
     template<typename Head, typename ...Other,
-             typename ResultSP = typename __util::ZipperSP<std::true_type, FutureSP<T>, Head, Other...>::type,
+             typename ResultSP = typename detail::ZipperSP<std::true_type, FutureSP<T>, Head, Other...>::type,
              typename Result = typename std::decay<decltype(*ResultSP().data())>::type::Value>
     FutureSP<Result> zip(Head head, Other... other)
     {
         return flatMap([head, other...](const T &v) -> FutureSP<Result> {
             return head->zip(other...)->map([v](const auto &argsResult) -> Result {
-                return std::tuple_cat(__util::TupleMaker<T>::result(v), argsResult);
+                return std::tuple_cat(detail::TupleMaker<T>::result(v), argsResult);
             });
         });
     }
@@ -456,9 +457,9 @@ private:
 
     void fillSuccess(const T &result)
     {
-        if (futures::__util::hasLastFailure()) {
-            auto failure = futures::__util::lastFailure();
-            futures::__util::resetLastFailure();
+        if (futures::detail::hasLastFailure()) {
+            auto failure = futures::detail::lastFailure();
+            futures::detail::resetLastFailure();
             fillFailure(failure);
             return;
         }
@@ -495,9 +496,9 @@ private:
         m_mainLock.unlock();
     }
 
-    auto zip() -> decltype(FutureSP<decltype(__util::TupleMaker<T>::result(T()))>())
+    auto zip() -> decltype(FutureSP<decltype(detail::TupleMaker<T>::result(T()))>())
     {
-        return map([](const T &v) {return __util::TupleMaker<T>::result(v);});
+        return map([](const T &v) {return detail::TupleMaker<T>::result(v);});
     }
 
     template<typename It, template<typename...> class Container>

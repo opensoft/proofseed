@@ -43,14 +43,14 @@ public:
 
     template<typename Task,
              typename Result = typename std::result_of_t<Task()>,
-             typename = typename std::enable_if_t<!std::is_same<Result, void>::value && !__util::IsSpecialization2<Result, QSharedPointer, Future>::value>>
+             typename = typename std::enable_if_t<!std::is_same<Result, void>::value && !detail::IsSpecialization2<Result, QSharedPointer, Future>::value>>
     CancelableFuture<Result> run(Task &&task, RestrictionType restrictionType, const QString &restrictor)
     {
         PromiseSP<Result> promise = PromiseSP<Result>::create();
         std::function<void()> f = [promise, task = std::forward<Task>(task)]() {
             if (promise->filled())
                 return;
-            Proof::futures::__util::resetLastFailure();
+            Proof::futures::detail::resetLastFailure();
             promise->success(task());
         };
         insertTaskInfo(std::move(f), restrictionType, restrictor);
@@ -60,14 +60,14 @@ public:
     template<typename Task,
              typename Result = typename std::result_of_t<Task()>,
              typename InnerResult = typename std::decay<decltype(*Result().data())>::type::Value,
-             typename = typename std::enable_if_t<__util::IsSpecialization2<Result, QSharedPointer, Future>::value>>
+             typename = typename std::enable_if_t<detail::IsSpecialization2<Result, QSharedPointer, Future>::value>>
     CancelableFuture<InnerResult> run(Task &&task, RestrictionType restrictionType, const QString &restrictor)
     {
         PromiseSP<InnerResult> promise = PromiseSP<InnerResult>::create();
         std::function<void()> f = [promise, task = std::forward<Task>(task)]() {
             if (promise->filled())
                 return;
-            Proof::futures::__util::resetLastFailure();
+            Proof::futures::detail::resetLastFailure();
             task()->onSuccess([promise](const InnerResult &result) {
                 promise->success(result);
             })->onFailure([promise](const Failure &failure) {
@@ -87,7 +87,7 @@ public:
         std::function<void()> f = [promise, task = std::forward<Task>(task)]() {
             if (promise->filled())
                 return;
-            Proof::futures::__util::resetLastFailure();
+            Proof::futures::detail::resetLastFailure();
             task();
             promise->success(true);
         };
@@ -143,7 +143,7 @@ auto run(Task &&task, RestrictionType restrictionType = RestrictionType::Custom,
 
 template<template<typename...> class Container, typename Input, typename Task,
          typename Output = typename std::result_of_t<Task(Input)>,
-         typename = typename std::enable_if_t<!std::is_same<Output, void>::value && !__util::IsSpecialization2<Output, QSharedPointer, Future>::value>>
+         typename = typename std::enable_if_t<!std::is_same<Output, void>::value && !detail::IsSpecialization2<Output, QSharedPointer, Future>::value>>
 auto run(const Container<Input> &data, Task &&task,
          RestrictionType restrictionType = RestrictionType::Custom, const QString &restrictor = QString())
 -> decltype(task(*(data.cbegin())),
@@ -159,7 +159,7 @@ auto run(const Container<Input> &data, Task &&task,
 
 template<template<typename...> class Container, typename Input, typename Task,
          typename Output = typename std::result_of_t<Task(Input)>,
-         typename = typename std::enable_if_t<__util::IsSpecialization2<Output, QSharedPointer, Future>::value>,
+         typename = typename std::enable_if_t<detail::IsSpecialization2<Output, QSharedPointer, Future>::value>,
          typename OutputValue = typename std::decay<decltype(*Output().data())>::type::Value>
 auto run(const Container<Input> &data, Task &&task,
          RestrictionType restrictionType = RestrictionType::Custom, const QString &restrictor = QString())
@@ -192,7 +192,7 @@ auto run(const Container<Input> &data, Task &&task,
 
 template<template<typename...> class Container, typename Input, typename Task,
          typename Output = typename std::result_of_t<Task(long long, Input)>,
-         typename = typename std::enable_if_t<!std::is_same<Output, void>::value && !__util::IsSpecialization2<Output, QSharedPointer, Future>::value>>
+         typename = typename std::enable_if_t<!std::is_same<Output, void>::value && !detail::IsSpecialization2<Output, QSharedPointer, Future>::value>>
 auto run(const Container<Input> &data, Task &&task,
          RestrictionType restrictionType = RestrictionType::Custom, const QString &restrictor = QString())
 -> decltype(task(0ll, *(data.cbegin())),
@@ -208,7 +208,7 @@ auto run(const Container<Input> &data, Task &&task,
 
 template<template<typename...> class Container, typename Input, typename Task,
          typename Output = typename std::result_of_t<Task(long long, Input)>,
-         typename = typename std::enable_if_t<__util::IsSpecialization2<Output, QSharedPointer, Future>::value>,
+         typename = typename std::enable_if_t<detail::IsSpecialization2<Output, QSharedPointer, Future>::value>,
          typename OutputValue = typename std::decay<decltype(*Output().data())>::type::Value>
 auto run(const Container<Input> &data, Task &&task,
          RestrictionType restrictionType = RestrictionType::Custom, const QString &restrictor = QString())

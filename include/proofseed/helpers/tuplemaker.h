@@ -3,7 +3,7 @@
 #include <tuple>
 
 namespace Proof {
-namespace __util {
+namespace detail {
 template<typename T>
 struct TupleMaker
 {

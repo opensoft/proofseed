@@ -3,7 +3,7 @@
 #include <type_traits>
 
 namespace Proof {
-namespace __util {
+namespace detail {
 //TODO: think about universal extractor instead of different namings per level
 
 template<typename Checkable>

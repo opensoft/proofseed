@@ -9,7 +9,7 @@
 #include <type_traits>
 
 namespace Proof {
-namespace __util {
+namespace detail {
 template <typename...> struct Zipper;
 
 template <template <typename...> class Wrapper, typename Left, typename Right>

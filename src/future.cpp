@@ -2,7 +2,7 @@
 
 namespace Proof {
 namespace futures {
-namespace __util {
+namespace detail {
 static thread_local std::experimental::optional<Failure> m_lastFailure;
 
 bool hasLastFailure()
