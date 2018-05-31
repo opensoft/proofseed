@@ -69,7 +69,7 @@ struct WithFailure
     explicit WithFailure(const Failure &f) {m_failure = f;}
     explicit WithFailure(Failure &&f) {m_failure = std::move(f);}
     template<typename ...Args>
-    explicit WithFailure(const Args &...args) {m_failure = Failure(args...);}
+    explicit WithFailure(Args &&...args) {m_failure = Failure(std::forward<Args>(args)...);}
     template<typename T> operator T()
     {
         futures::detail::setLastFailure(std::move(m_failure));
@@ -472,11 +472,13 @@ private:
         }
         m_result = result;
         m_state.store(SucceededFuture, std::memory_order_release);
-        for (const auto &f : m_successCallbacks)
-            f(result);
-        m_successCallbacks.clear();
+
+        std::list<std::function<void(const T&)>> callbacks;
+        std::swap(callbacks, m_successCallbacks);
         m_failureCallbacks.clear();
         m_mainLock.unlock();
+        for (const auto &f : callbacks)
+            f(result);
     }
 
     void fillFailure(const Failure &reason)
@@ -489,11 +491,13 @@ private:
         }
         m_failureReason = reason;
         m_state.store(FailedFuture, std::memory_order_release);
-        for (const auto &f : m_failureCallbacks)
-            f(reason);
+
+        std::list<std::function<void(const Failure&)>> callbacks;
+        std::swap(callbacks, m_failureCallbacks);
         m_successCallbacks.clear();
-        m_failureCallbacks.clear();
         m_mainLock.unlock();
+        for (const auto &f : callbacks)
+            f(reason);
     }
 
     auto zip() -> decltype(FutureSP<decltype(detail::TupleMaker<T>::result(T()))>())
