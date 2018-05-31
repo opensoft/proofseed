@@ -1,16 +1,17 @@
 #include "proofcore/tasks.h"
+
 #include "proofcore/spinlock.h"
 
-#include <QThread>
-#include <QString>
-#include <QMutex>
-#include <QWaitCondition>
 #include <QCoreApplication>
+#include <QMutex>
+#include <QString>
+#include <QThread>
+#include <QWaitCondition>
 
-#include <vector>
 #include <list>
-#include <set>
 #include <map>
+#include <set>
+#include <vector>
 
 constexpr qint32 HTTP_CAPACITY = 6;
 static const qint32 INTENSIVE_CAPACITY = qMax(QThread::idealThreadCount(), 1);
@@ -24,8 +25,7 @@ struct TaskInfo
 {
     TaskInfo(std::function<void()> &&_task, RestrictionType _type, const QString &_restrictor)
         : task(std::move(_task)), restrictionType(_type), restrictor(_restrictor)
-    {
-    }
+    {}
     std::function<void()> task;
     // having multiple restrictors is technically possible and in some rare cases can help a lot,
     // but due to possibility for task never run they are not allowed
@@ -38,6 +38,7 @@ class TasksDispatcherPrivate
 {
     Q_DECLARE_PUBLIC(TasksDispatcher)
     TasksDispatcher *q_ptr;
+
 public:
     void taskFinished(qint32 workerId, const TaskInfo &taskInfo);
 
@@ -70,24 +71,25 @@ public:
     Worker(qint32 id);
     void setNextTask(const TaskInfo &task);
     void poisonPill();
+
 protected:
     void run() override;
+
 private:
     qint32 id = 0;
-    std::atomic_bool poisoned {false};
-    std::atomic_bool asleep {false};
+    std::atomic_bool poisoned{false};
+    std::atomic_bool asleep{false};
     std::experimental::optional<TaskInfo> nextTask;
     QWaitCondition waiter;
     QMutex taskLock;
 };
 
-}
-}
+} // namespace tasks
+} // namespace Proof
 
 using namespace Proof::tasks;
 
-TasksDispatcher::TasksDispatcher()
-    : d_ptr(new TasksDispatcherPrivate)
+TasksDispatcher::TasksDispatcher() : d_ptr(new TasksDispatcherPrivate)
 {
     d_ptr->q_ptr = this;
 }
@@ -147,7 +149,8 @@ void TasksDispatcher::addCustomRestrictor(const QString &restrictor, qint32 capa
 
 void TasksDispatcher::fireSignalWaiters()
 {
-    Q_ASSERT_X(d_ptr->poolThreads.count(QThread::currentThread()), "fireSignalWaiters", "signal waiters can't be used outside of tasks thread pool");
+    Q_ASSERT_X(d_ptr->poolThreads.count(QThread::currentThread()), "fireSignalWaiters",
+               "signal waiters can't be used outside of tasks thread pool");
     qApp->processEvents();
     if (!d_ptr->signalWaitersEventLoop)
         return;
@@ -157,18 +160,21 @@ void TasksDispatcher::fireSignalWaiters()
     qCDebug(proofCoreTasksExtraLog) << "Thread" << QThread::currentThread() << ": signal waiters fired";
 }
 
-void TasksDispatcher::insertTaskInfo(std::function<void ()> &&wrappedTask, RestrictionType restrictionType, const QString &restrictor)
+void TasksDispatcher::insertTaskInfo(std::function<void()> &&wrappedTask, RestrictionType restrictionType,
+                                     const QString &restrictor)
 {
     d_ptr->mainLock.lock();
     //We mimic all intensive tasks as under single restrictor
-    d_ptr->tasks.emplace_back(std::move(wrappedTask), restrictionType, restrictionType == RestrictionType::Intensive ? QLatin1String("_") : restrictor);
+    d_ptr->tasks.emplace_back(std::move(wrappedTask), restrictionType,
+                              restrictionType == RestrictionType::Intensive ? QLatin1String("_") : restrictor);
     d_ptr->schedule();
     d_ptr->mainLock.unlock();
 }
 
-void TasksDispatcher::addSignalWaiterPrivate(std::function<void (const QSharedPointer<QEventLoop> &)> &&connector)
+void TasksDispatcher::addSignalWaiterPrivate(std::function<void(const QSharedPointer<QEventLoop> &)> &&connector)
 {
-    Q_ASSERT_X(d_ptr->poolThreads.count(QThread::currentThread()), "addSignalWaiterPrivate", "signal waiters can't be used outside of tasks thread pool");
+    Q_ASSERT_X(d_ptr->poolThreads.count(QThread::currentThread()), "addSignalWaiterPrivate",
+               "signal waiters can't be used outside of tasks thread pool");
     if (!d_ptr->signalWaitersEventLoop) {
         d_ptr->currentEventLoopStarted = false;
         d_ptr->signalWaitersEventLoop.reset(new QEventLoop);
@@ -225,7 +231,9 @@ void TasksDispatcherPrivate::schedule(qint32 forcedWorkerId)
         }
     }
 
-    const qint32 precalculatedWorkerId = (forcedWorkerId >= 0 && waitingWorkers.count(forcedWorkerId)) ? forcedWorkerId : *waitingWorkers.cbegin();
+    const qint32 precalculatedWorkerId = (forcedWorkerId >= 0 && waitingWorkers.count(forcedWorkerId))
+                                             ? forcedWorkerId
+                                             : *waitingWorkers.cbegin();
     for (auto it = tasks.begin(); it != tasks.end(); ++it) {
         if (tryTaskScheduling(*it, precalculatedWorkerId)) {
             tasks.erase(it);
@@ -244,9 +252,12 @@ bool TasksDispatcherPrivate::tryTaskScheduling(const TaskInfo &task, qint32 work
         } else {
             if (static_cast<qint32>(boundWorkers.size()) < capacity) {
                 if (boundWorkers.count(workerId))
-                    workerId = algorithms::findIf(waitingWorkers, [this](qint32 x) -> bool {return !boundWorkers.count(x);}, -1);
+                    workerId = algorithms::findIf(waitingWorkers,
+                                                  [this](qint32 x) -> bool { return !boundWorkers.count(x); }, -1);
             } else {
-                auto minimizer = [this](qint32 acc, qint32 x) -> qint32 {return acc < 0 || boundWorkers[acc] > boundWorkers[x] ? x : acc;};
+                auto minimizer = [this](qint32 acc, qint32 x) -> qint32 {
+                    return acc < 0 || boundWorkers[acc] > boundWorkers[x] ? x : acc;
+                };
                 workerId = algorithms::reduce(waitingBoundWorkers, minimizer, -1);
                 workerId = algorithms::reduce(waitingWorkers, minimizer, workerId);
             }
@@ -286,10 +297,8 @@ bool TasksDispatcherPrivate::tryTaskScheduling(const TaskInfo &task, qint32 work
     return true;
 }
 
-Worker::Worker(qint32 id)
-    : QThread(nullptr), id(id)
-{
-}
+Worker::Worker(qint32 id) : QThread(nullptr), id(id)
+{}
 
 void Worker::setNextTask(const TaskInfo &task)
 {

@@ -29,7 +29,6 @@ void setLastFailure(const Proof::Failure &failure)
 {
     m_lastFailure = failure;
 }
-}
-}
-}
-
+} // namespace detail
+} // namespace futures
+} // namespace Proof

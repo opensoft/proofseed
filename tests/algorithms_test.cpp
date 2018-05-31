@@ -1,16 +1,17 @@
 // clazy:skip
 
-#include "gtest/test_global.h"
-
 #include "proofcore/proofalgorithms.h"
 
+#include <QJsonArray>
 #include <QList>
-#include <QVector>
+#include <QMap>
 #include <QSet>
+#include <QVector>
+
+#include "gtest/test_global.h"
+
 #include <set>
 #include <vector>
-#include <QMap>
-#include <QJsonArray>
 
 using namespace Proof;
 
@@ -28,10 +29,10 @@ TEST(AlgorithmsTest, eraseIfQList)
     QList<int> testContainer = {1, 2, 3, 4, 5, 6, 7, 8, 9};
     QList<int> result;
 
-    auto evenPredicate = [](int x)->bool{return !(x % 2);};
-    auto bigValuePredicate = [](int x)->bool{return x > 42;};
-    auto smallValuePredicate = [](int x)->bool{return x < 42;};
-    auto nonEqualPredicate = [](int x)->bool{return x != 5;};
+    auto evenPredicate = [](int x) -> bool { return !(x % 2); };
+    auto bigValuePredicate = [](int x) -> bool { return x > 42; };
+    auto smallValuePredicate = [](int x) -> bool { return x < 42; };
+    auto nonEqualPredicate = [](int x) -> bool { return x != 5; };
 
     result = emptyContainer;
     algorithms::eraseIf(result, evenPredicate);
@@ -67,10 +68,10 @@ TEST(AlgorithmsTest, eraseIfVector)
     std::vector<int> testContainer = {1, 2, 3, 4, 5, 6, 7, 8, 9};
     std::vector<int> result;
 
-    auto evenPredicate = [](int x)->bool{return !(x % 2);};
-    auto bigValuePredicate = [](int x)->bool{return x > 42;};
-    auto smallValuePredicate = [](int x)->bool{return x < 42;};
-    auto nonEqualPredicate = [](int x)->bool{return x != 5;};
+    auto evenPredicate = [](int x) -> bool { return !(x % 2); };
+    auto bigValuePredicate = [](int x) -> bool { return x > 42; };
+    auto smallValuePredicate = [](int x) -> bool { return x < 42; };
+    auto nonEqualPredicate = [](int x) -> bool { return x != 5; };
 
     result = emptyContainer;
     algorithms::eraseIf(result, evenPredicate);
@@ -103,13 +104,26 @@ TEST(AlgorithmsTest, eraseIfVector)
 TEST(AlgorithmsTest, eraseIfQMap)
 {
     QMap<int, bool> emptyContainer;
-    QMap<int, bool> testContainer = {{1, true}, {2, false}, {3, true}, {4, false}, {5, true}, {6, false}, {7, true}, {8, false}, {9, true}};
+    QMap<int, bool> testContainer = {{1, true},  {2, false}, {3, true},  {4, false}, {5, true},
+                                     {6, false}, {7, true},  {8, false}, {9, true}};
     QMap<int, bool> result;
 
-    auto falseValuePredicate = [](const auto &key, const auto &value)->bool{Q_UNUSED(key); return !value;};
-    auto bigValuePredicate = [](const auto &key, const auto &value)->bool{Q_UNUSED(value); return key > 42;};
-    auto smallValuePredicate = [](const auto &key, const auto &value)->bool{Q_UNUSED(value); return key < 42;};
-    auto nonEqualPredicate = [](const auto &key, const auto &value)->bool{Q_UNUSED(value); return key != 5;};
+    auto falseValuePredicate = [](const auto &key, const auto &value) -> bool {
+        Q_UNUSED(key);
+        return !value;
+    };
+    auto bigValuePredicate = [](const auto &key, const auto &value) -> bool {
+        Q_UNUSED(value);
+        return key > 42;
+    };
+    auto smallValuePredicate = [](const auto &key, const auto &value) -> bool {
+        Q_UNUSED(value);
+        return key < 42;
+    };
+    auto nonEqualPredicate = [](const auto &key, const auto &value) -> bool {
+        Q_UNUSED(value);
+        return key != 5;
+    };
 
     result = emptyContainer;
     algorithms::eraseIf(result, falseValuePredicate);
@@ -140,13 +154,26 @@ TEST(AlgorithmsTest, eraseIfQMap)
 TEST(AlgorithmsTest, eraseIfQHash)
 {
     QHash<int, bool> emptyContainer;
-    QHash<int, bool> testContainer = {{1, true}, {2, false}, {3, true}, {4, false}, {5, true}, {6, false}, {7, true}, {8, false}, {9, true}};
+    QHash<int, bool> testContainer = {{1, true},  {2, false}, {3, true},  {4, false}, {5, true},
+                                      {6, false}, {7, true},  {8, false}, {9, true}};
     QHash<int, bool> result;
 
-    auto falseValuePredicate = [](const auto &key, const auto &value)->bool{Q_UNUSED(key); return !value;};
-    auto bigValuePredicate = [](const auto &key, const auto &value)->bool{Q_UNUSED(value); return key > 42;};
-    auto smallValuePredicate = [](const auto &key, const auto &value)->bool{Q_UNUSED(value); return key < 42;};
-    auto nonEqualPredicate = [](const auto &key, const auto &value)->bool{Q_UNUSED(value); return key != 5;};
+    auto falseValuePredicate = [](const auto &key, const auto &value) -> bool {
+        Q_UNUSED(key);
+        return !value;
+    };
+    auto bigValuePredicate = [](const auto &key, const auto &value) -> bool {
+        Q_UNUSED(value);
+        return key > 42;
+    };
+    auto smallValuePredicate = [](const auto &key, const auto &value) -> bool {
+        Q_UNUSED(value);
+        return key < 42;
+    };
+    auto nonEqualPredicate = [](const auto &key, const auto &value) -> bool {
+        Q_UNUSED(value);
+        return key != 5;
+    };
 
     result = emptyContainer;
     algorithms::eraseIf(result, falseValuePredicate);
@@ -220,9 +247,9 @@ TEST(AlgorithmsTest, findIfQList)
     QList<int> testContainer = {1, 2, 3, 4, 5, 6, 7, 8, 9};
     int result;
 
-    auto oddPredicate = [](int x)->bool{return x % 2;};
-    auto bigValuePredicate = [](int x)->bool{return x > 42;};
-    auto equalPredicate = [](int x)->bool{return x == 5;};
+    auto oddPredicate = [](int x) -> bool { return x % 2; };
+    auto bigValuePredicate = [](int x) -> bool { return x > 42; };
+    auto equalPredicate = [](int x) -> bool { return x == 5; };
 
     result = algorithms::findIf(emptyContainer, oddPredicate, -1);
     EXPECT_EQ(-1, result);
@@ -246,9 +273,9 @@ TEST(AlgorithmsTest, findIfQSet)
     QSet<int> testContainer = {1, 2, 3, 4, 5, 6, 7, 8, 9};
     int result;
 
-    auto oddPredicate = [](int x)->bool{return x % 2;};
-    auto bigValuePredicate = [](int x)->bool{return x > 42;};
-    auto equalPredicate = [](int x)->bool{return x == 5;};
+    auto oddPredicate = [](int x) -> bool { return x % 2; };
+    auto bigValuePredicate = [](int x) -> bool { return x > 42; };
+    auto equalPredicate = [](int x) -> bool { return x == 5; };
 
     result = algorithms::findIf(emptyContainer, oddPredicate, -1);
     EXPECT_EQ(-1, result);
@@ -269,12 +296,13 @@ TEST(AlgorithmsTest, findIfQSet)
 TEST(AlgorithmsTest, findIfQMap)
 {
     QMap<int, bool> emptyContainer;
-    QMap<int, bool> testContainer = {{1, true}, {2, false}, {3, true}, {4, false}, {5, true}, {6, false}, {7, true}, {8, false}, {9, true}};
+    QMap<int, bool> testContainer = {{1, true},  {2, false}, {3, true},  {4, false}, {5, true},
+                                     {6, false}, {7, true},  {8, false}, {9, true}};
     QPair<int, bool> result;
 
-    auto oddPredicate = [](int, bool y)->bool{return y;};
-    auto bigValuePredicate = [](int x, bool)->bool{return x > 42;};
-    auto equalPredicate = [](int x, bool)->bool{return x == 5;};
+    auto oddPredicate = [](int, bool y) -> bool { return y; };
+    auto bigValuePredicate = [](int x, bool) -> bool { return x > 42; };
+    auto equalPredicate = [](int x, bool) -> bool { return x == 5; };
 
     result = algorithms::findIf(emptyContainer, oddPredicate, qMakePair(-1, false));
     EXPECT_EQ(-1, result.first);
@@ -304,9 +332,9 @@ TEST(AlgorithmsTest, findIfVector)
     std::vector<int> testContainer = {1, 2, 3, 4, 5, 6, 7, 8, 9};
     int result;
 
-    auto oddPredicate = [](int x)->bool{return x % 2;};
-    auto bigValuePredicate = [](int x)->bool{return x > 42;};
-    auto equalPredicate = [](int x)->bool{return x == 5;};
+    auto oddPredicate = [](int x) -> bool { return x % 2; };
+    auto bigValuePredicate = [](int x) -> bool { return x > 42; };
+    auto equalPredicate = [](int x) -> bool { return x == 5; };
 
     result = algorithms::findIf(emptyContainer, oddPredicate, -1);
     EXPECT_EQ(-1, result);
@@ -330,9 +358,9 @@ TEST(AlgorithmsTest, findIfSet)
     std::set<int> testContainer = {1, 2, 3, 4, 5, 6, 7, 8, 9};
     int result;
 
-    auto oddPredicate = [](int x)->bool{return x % 2;};
-    auto bigValuePredicate = [](int x)->bool{return x > 42;};
-    auto equalPredicate = [](int x)->bool{return x == 5;};
+    auto oddPredicate = [](int x) -> bool { return x % 2; };
+    auto bigValuePredicate = [](int x) -> bool { return x > 42; };
+    auto equalPredicate = [](int x) -> bool { return x == 5; };
 
     result = algorithms::findIf(emptyContainer, oddPredicate, -1);
     EXPECT_EQ(-1, result);
@@ -355,8 +383,8 @@ TEST(AlgorithmsTest, existsQList)
     QList<int> emptyContainer;
     QList<int> testContainer = {1, 2, 3, 4, 5, 6, 7, 8, 9};
 
-    auto truePredicate = [](int x)->bool{return x % 2;};
-    auto falsePredicate = [](int x)->bool{return x > 42;};
+    auto truePredicate = [](int x) -> bool { return x % 2; };
+    auto falsePredicate = [](int x) -> bool { return x > 42; };
 
     EXPECT_FALSE(algorithms::exists(emptyContainer, truePredicate));
     EXPECT_TRUE(algorithms::exists(testContainer, truePredicate));
@@ -368,8 +396,8 @@ TEST(AlgorithmsTest, existsQSet)
     QSet<int> emptyContainer;
     QSet<int> testContainer = {1, 2, 3, 4, 5, 6, 7, 8, 9};
 
-    auto truePredicate = [](int x)->bool{return x % 2;};
-    auto falsePredicate = [](int x)->bool{return x > 42;};
+    auto truePredicate = [](int x) -> bool { return x % 2; };
+    auto falsePredicate = [](int x) -> bool { return x > 42; };
 
     EXPECT_FALSE(algorithms::exists(emptyContainer, truePredicate));
     EXPECT_TRUE(algorithms::exists(testContainer, truePredicate));
@@ -379,10 +407,11 @@ TEST(AlgorithmsTest, existsQSet)
 TEST(AlgorithmsTest, existsQMap)
 {
     QMap<int, bool> emptyContainer;
-    QMap<int, bool> testContainer = {{1, true}, {2, false}, {3, true}, {4, false}, {5, true}, {6, false}, {7, true}, {8, false}, {9, true}};
+    QMap<int, bool> testContainer = {{1, true},  {2, false}, {3, true},  {4, false}, {5, true},
+                                     {6, false}, {7, true},  {8, false}, {9, true}};
 
-    auto truePredicate = [](int, bool y)->bool{return y;};
-    auto falsePredicate = [](int x, bool)->bool{return x > 42;};
+    auto truePredicate = [](int, bool y) -> bool { return y; };
+    auto falsePredicate = [](int x, bool) -> bool { return x > 42; };
 
     EXPECT_FALSE(algorithms::exists(emptyContainer, truePredicate));
     EXPECT_TRUE(algorithms::exists(testContainer, truePredicate));
@@ -394,8 +423,8 @@ TEST(AlgorithmsTest, existsVector)
     std::vector<int> emptyContainer;
     std::vector<int> testContainer = {1, 2, 3, 4, 5, 6, 7, 8, 9};
 
-    auto truePredicate = [](int x)->bool{return x % 2;};
-    auto falsePredicate = [](int x)->bool{return x > 42;};
+    auto truePredicate = [](int x) -> bool { return x % 2; };
+    auto falsePredicate = [](int x) -> bool { return x > 42; };
 
     EXPECT_FALSE(algorithms::exists(emptyContainer, truePredicate));
     EXPECT_TRUE(algorithms::exists(testContainer, truePredicate));
@@ -407,8 +436,8 @@ TEST(AlgorithmsTest, existsSet)
     std::set<int> emptyContainer;
     std::set<int> testContainer = {1, 2, 3, 4, 5, 6, 7, 8, 9};
 
-    auto truePredicate = [](int x)->bool{return x % 2;};
-    auto falsePredicate = [](int x)->bool{return x > 42;};
+    auto truePredicate = [](int x) -> bool { return x % 2; };
+    auto falsePredicate = [](int x) -> bool { return x > 42; };
 
     EXPECT_FALSE(algorithms::exists(emptyContainer, truePredicate));
     EXPECT_TRUE(algorithms::exists(testContainer, truePredicate));
@@ -420,8 +449,8 @@ TEST(AlgorithmsTest, forAllQList)
     QList<int> emptyContainer;
     QList<int> testContainer = {1, 2, 3, 4, 5, 6, 7, 8, 9};
 
-    auto truePredicate = [](int x)->bool{return x < 42;};
-    auto falsePredicate = [](int x)->bool{return x == 5;};
+    auto truePredicate = [](int x) -> bool { return x < 42; };
+    auto falsePredicate = [](int x) -> bool { return x == 5; };
 
     EXPECT_TRUE(algorithms::forAll(emptyContainer, truePredicate));
     EXPECT_TRUE(algorithms::forAll(testContainer, truePredicate));
@@ -433,8 +462,8 @@ TEST(AlgorithmsTest, forAllQSet)
     QSet<int> emptyContainer;
     QSet<int> testContainer = {1, 2, 3, 4, 5, 6, 7, 8, 9};
 
-    auto truePredicate = [](int x)->bool{return x < 42;};
-    auto falsePredicate = [](int x)->bool{return x == 5;};
+    auto truePredicate = [](int x) -> bool { return x < 42; };
+    auto falsePredicate = [](int x) -> bool { return x == 5; };
 
     EXPECT_TRUE(algorithms::forAll(emptyContainer, truePredicate));
     EXPECT_TRUE(algorithms::forAll(testContainer, truePredicate));
@@ -444,10 +473,11 @@ TEST(AlgorithmsTest, forAllQSet)
 TEST(AlgorithmsTest, forAllQMap)
 {
     QMap<int, bool> emptyContainer;
-    QMap<int, bool> testContainer = {{1, true}, {2, false}, {3, true}, {4, false}, {5, true}, {6, false}, {7, true}, {8, false}, {9, true}};
+    QMap<int, bool> testContainer = {{1, true},  {2, false}, {3, true},  {4, false}, {5, true},
+                                     {6, false}, {7, true},  {8, false}, {9, true}};
 
-    auto truePredicate = [](int x, bool)->bool{return x < 42;};
-    auto falsePredicate = [](int, bool y)->bool{return y;};
+    auto truePredicate = [](int x, bool) -> bool { return x < 42; };
+    auto falsePredicate = [](int, bool y) -> bool { return y; };
 
     EXPECT_TRUE(algorithms::forAll(emptyContainer, truePredicate));
     EXPECT_TRUE(algorithms::forAll(testContainer, truePredicate));
@@ -459,8 +489,8 @@ TEST(AlgorithmsTest, forAllVector)
     std::vector<int> emptyContainer;
     std::vector<int> testContainer = {1, 2, 3, 4, 5, 6, 7, 8, 9};
 
-    auto truePredicate = [](int x)->bool{return x < 42;};
-    auto falsePredicate = [](int x)->bool{return x == 5;};
+    auto truePredicate = [](int x) -> bool { return x < 42; };
+    auto falsePredicate = [](int x) -> bool { return x == 5; };
 
     EXPECT_TRUE(algorithms::forAll(emptyContainer, truePredicate));
     EXPECT_TRUE(algorithms::forAll(testContainer, truePredicate));
@@ -472,8 +502,8 @@ TEST(AlgorithmsTest, forAllSet)
     std::set<int> emptyContainer;
     std::set<int> testContainer = {1, 2, 3, 4, 5, 6, 7, 8, 9};
 
-    auto truePredicate = [](int x)->bool{return x < 42;};
-    auto falsePredicate = [](int x)->bool{return x == 5;};
+    auto truePredicate = [](int x) -> bool { return x < 42; };
+    auto falsePredicate = [](int x) -> bool { return x == 5; };
 
     EXPECT_TRUE(algorithms::forAll(emptyContainer, truePredicate));
     EXPECT_TRUE(algorithms::forAll(testContainer, truePredicate));
@@ -486,9 +516,9 @@ TEST(AlgorithmsTest, filterQList)
     QList<int> testContainer = {1, 2, 3, 4, 5, 6, 7, 8, 9};
     QList<int> result;
 
-    auto oddPredicate = [](int x)->bool{return x % 2;};
-    auto bigValuePredicate = [](int x)->bool{return x > 42;};
-    auto equalPredicate = [](int x)->bool{return x == 5;};
+    auto oddPredicate = [](int x) -> bool { return x % 2; };
+    auto bigValuePredicate = [](int x) -> bool { return x > 42; };
+    auto equalPredicate = [](int x) -> bool { return x == 5; };
 
     result = algorithms::filter(emptyContainer, oddPredicate);
     EXPECT_EQ(0, result.size());
@@ -514,9 +544,9 @@ TEST(AlgorithmsTest, filterQSet)
     QSet<int> testContainer = {1, 2, 3, 4, 5, 6, 7, 8, 9};
     QList<int> result;
 
-    auto oddPredicate = [](int x)->bool{return x % 2;};
-    auto bigValuePredicate = [](int x)->bool{return x > 42;};
-    auto equalPredicate = [](int x)->bool{return x == 5;};
+    auto oddPredicate = [](int x) -> bool { return x % 2; };
+    auto bigValuePredicate = [](int x) -> bool { return x > 42; };
+    auto equalPredicate = [](int x) -> bool { return x == 5; };
 
     result = algorithms::filter(emptyContainer, oddPredicate).toList();
     EXPECT_EQ(0, result.size());
@@ -540,12 +570,13 @@ TEST(AlgorithmsTest, filterQSet)
 TEST(AlgorithmsTest, filterQMap)
 {
     QMap<int, bool> emptyContainer;
-    QMap<int, bool> testContainer = {{1, true}, {2, false}, {3, true}, {4, false}, {5, true}, {6, false}, {7, true}, {8, false}, {9, true}};
+    QMap<int, bool> testContainer = {{1, true},  {2, false}, {3, true},  {4, false}, {5, true},
+                                     {6, false}, {7, true},  {8, false}, {9, true}};
     QMap<int, bool> result;
 
-    auto oddPredicate = [](int, bool y)->bool{return y;};
-    auto bigValuePredicate = [](int x, bool)->bool{return x > 42;};
-    auto equalPredicate = [](int x, bool)->bool{return x == 5;};
+    auto oddPredicate = [](int, bool y) -> bool { return y; };
+    auto bigValuePredicate = [](int x, bool) -> bool { return x > 42; };
+    auto equalPredicate = [](int x, bool) -> bool { return x == 5; };
 
     result = algorithms::filter(emptyContainer, oddPredicate);
     EXPECT_EQ(0, result.size());
@@ -571,9 +602,9 @@ TEST(AlgorithmsTest, filterVector)
     std::vector<int> testContainer = {1, 2, 3, 4, 5, 6, 7, 8, 9};
     std::vector<int> result;
 
-    auto oddPredicate = [](int x)->bool{return x % 2;};
-    auto bigValuePredicate = [](int x)->bool{return x > 42;};
-    auto equalPredicate = [](int x)->bool{return x == 5;};
+    auto oddPredicate = [](int x) -> bool { return x % 2; };
+    auto bigValuePredicate = [](int x) -> bool { return x > 42; };
+    auto equalPredicate = [](int x) -> bool { return x == 5; };
 
     result = algorithms::filter(emptyContainer, oddPredicate);
     EXPECT_EQ(0u, result.size());
@@ -599,9 +630,9 @@ TEST(AlgorithmsTest, filterSet)
     std::set<int> testContainer = {1, 2, 3, 4, 5, 6, 7, 8, 9};
     std::vector<int> result;
 
-    auto oddPredicate = [](int x)->bool{return x % 2;};
-    auto bigValuePredicate = [](int x)->bool{return x > 42;};
-    auto equalPredicate = [](int x)->bool{return x == 5;};
+    auto oddPredicate = [](int x) -> bool { return x % 2; };
+    auto bigValuePredicate = [](int x) -> bool { return x > 42; };
+    auto equalPredicate = [](int x) -> bool { return x == 5; };
 
     result = setToVector(algorithms::filter(emptyContainer, oddPredicate));
     EXPECT_EQ(0u, result.size());
@@ -625,7 +656,8 @@ TEST(AlgorithmsTest, reduceQList)
 {
     QList<int> emptyContainer;
     QList<int> testContainer = {1, 2, 3, 4, 5, 6, 7, 8, 9};
-    struct Result {
+    struct Result
+    {
         int sum;
         int mult;
     };
@@ -634,8 +666,8 @@ TEST(AlgorithmsTest, reduceQList)
     int sum = 1 + 2 + 3 + 4 + 5 + 6 + 7 + 8 + 9;
     int mult = 1 * 2 * 3 * 4 * 5 * 6 * 7 * 8 * 9;
 
-    auto simpleReducer = [](int acc, int x)->int{return acc * x;};
-    auto complexReducer = [](Result acc, int x)->Result{return Result{acc.sum + x, acc.mult * x};};
+    auto simpleReducer = [](int acc, int x) -> int { return acc * x; };
+    auto complexReducer = [](Result acc, int x) -> Result { return Result{acc.sum + x, acc.mult * x}; };
 
     result = algorithms::reduce(testContainer, simpleReducer, 1);
     EXPECT_EQ(mult, result);
@@ -651,7 +683,8 @@ TEST(AlgorithmsTest, reduceQSet)
 {
     QSet<int> emptyContainer;
     QSet<int> testContainer = {1, 2, 3, 4, 5, 6, 7, 8, 9};
-    struct Result {
+    struct Result
+    {
         int sum;
         int mult;
     };
@@ -660,8 +693,8 @@ TEST(AlgorithmsTest, reduceQSet)
     int sum = 1 + 2 + 3 + 4 + 5 + 6 + 7 + 8 + 9;
     int mult = 1 * 2 * 3 * 4 * 5 * 6 * 7 * 8 * 9;
 
-    auto simpleReducer = [](int acc, int x)->int{return acc * x;};
-    auto complexReducer = [](Result acc, int x)->Result{return Result{acc.sum + x, acc.mult * x};};
+    auto simpleReducer = [](int acc, int x) -> int { return acc * x; };
+    auto complexReducer = [](Result acc, int x) -> Result { return Result{acc.sum + x, acc.mult * x}; };
 
     result = algorithms::reduce(testContainer, simpleReducer, 1);
     EXPECT_EQ(mult, result);
@@ -676,8 +709,10 @@ TEST(AlgorithmsTest, reduceQSet)
 TEST(AlgorithmsTest, reduceQMap)
 {
     QMap<int, bool> emptyContainer;
-    QMap<int, bool> testContainer = {{1, true}, {2, false}, {3, true}, {4, false}, {5, true}, {6, false}, {7, true}, {8, false}, {9, true}};
-    struct Result {
+    QMap<int, bool> testContainer = {{1, true},  {2, false}, {3, true},  {4, false}, {5, true},
+                                     {6, false}, {7, true},  {8, false}, {9, true}};
+    struct Result
+    {
         int sum;
         int mult;
     };
@@ -687,8 +722,8 @@ TEST(AlgorithmsTest, reduceQMap)
     int mult = 1 * 2 * 3 * 4 * 5 * 6 * 7 * 8 * 9;
     int simpleMult = 1 * 3 * 5 * 7 * 9;
 
-    auto simpleReducer = [](int acc, int x, bool y)->int{return y ? acc * x : acc;};
-    auto complexReducer = [](Result acc, int x, bool)->Result{return Result{acc.sum + x, acc.mult * x};};
+    auto simpleReducer = [](int acc, int x, bool y) -> int { return y ? acc * x : acc; };
+    auto complexReducer = [](Result acc, int x, bool) -> Result { return Result{acc.sum + x, acc.mult * x}; };
 
     result = algorithms::reduce(testContainer, simpleReducer, 1);
     EXPECT_EQ(simpleMult, result);
@@ -704,7 +739,8 @@ TEST(AlgorithmsTest, reduceVector)
 {
     std::vector<int> emptyContainer;
     std::vector<int> testContainer = {1, 2, 3, 4, 5, 6, 7, 8, 9};
-    struct Result {
+    struct Result
+    {
         int sum;
         int mult;
     };
@@ -713,8 +749,8 @@ TEST(AlgorithmsTest, reduceVector)
     int sum = 1 + 2 + 3 + 4 + 5 + 6 + 7 + 8 + 9;
     int mult = 1 * 2 * 3 * 4 * 5 * 6 * 7 * 8 * 9;
 
-    auto simpleReducer = [](int acc, int x)->int{return acc * x;};
-    auto complexReducer = [](Result acc, int x)->Result{return Result{acc.sum + x, acc.mult * x};};
+    auto simpleReducer = [](int acc, int x) -> int { return acc * x; };
+    auto complexReducer = [](Result acc, int x) -> Result { return Result{acc.sum + x, acc.mult * x}; };
 
     result = algorithms::reduce(testContainer, simpleReducer, 1);
     EXPECT_EQ(mult, result);
@@ -730,7 +766,8 @@ TEST(AlgorithmsTest, reduceSet)
 {
     std::set<int> emptyContainer;
     std::set<int> testContainer = {1, 2, 3, 4, 5, 6, 7, 8, 9};
-    struct Result {
+    struct Result
+    {
         int sum;
         int mult;
     };
@@ -739,8 +776,8 @@ TEST(AlgorithmsTest, reduceSet)
     int sum = 1 + 2 + 3 + 4 + 5 + 6 + 7 + 8 + 9;
     int mult = 1 * 2 * 3 * 4 * 5 * 6 * 7 * 8 * 9;
 
-    auto simpleReducer = [](int acc, int x)->int{return acc * x;};
-    auto complexReducer = [](Result acc, int x)->Result{return Result{acc.sum + x, acc.mult * x};};
+    auto simpleReducer = [](int acc, int x) -> int { return acc * x; };
+    auto complexReducer = [](Result acc, int x) -> Result { return Result{acc.sum + x, acc.mult * x}; };
 
     result = algorithms::reduce(testContainer, simpleReducer, 1);
     EXPECT_EQ(mult, result);

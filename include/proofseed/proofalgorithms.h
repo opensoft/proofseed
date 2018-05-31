@@ -5,109 +5,121 @@
 
 #include <QPair>
 
-#include <type_traits>
 #include <algorithm>
+#include <type_traits>
 
 namespace Proof {
 namespace algorithms {
 namespace detail {
-template<int current> struct level : level<current - 1> {};
-template<> struct level<0> {};
+template <int current>
+struct level : level<current - 1>
+{};
+template <>
+struct level<0>
+{};
 
-template<typename C, typename T>
+template <typename C, typename T>
 auto addToContainer(C &container, const T &value) -> decltype(container.push_back(value), void())
 {
     container.push_back(value);
 }
 
-template<typename C, typename T>
+template <typename C, typename T>
 auto addToContainer(C &container, const T &value) -> decltype(container.insert(value), void())
 {
     container.insert(value);
 }
 
-template<typename C, typename T>
+template <typename C, typename T>
 auto addToContainer(C &container, const T &value) -> decltype(container.insert(value.key(), value.value()), void())
 {
     container.insert(value.key(), value.value());
 }
 
-template<typename C, typename T>
+template <typename C, typename T>
 auto addToContainer(C &container, const T &value) -> decltype(container.insert(value.first, value.second), void())
 {
     container.insert(value.first, value.second);
 }
 
-template<typename C>
+template <typename C>
 auto reserveContainer(C &container, long long size, level<1>) -> decltype(container.reserve(size), void())
 {
     container.reserve(size);
 }
 
-template<typename C> void reserveContainer(C &, long long, level<0>) {}
+template <typename C>
+void reserveContainer(C &, long long, level<0>)
+{}
 
 //Caller
-template<typename C> void reserveContainer(C &container, long long size) {
+template <typename C>
+void reserveContainer(C &container, long long size)
+{
     reserveContainer(container, size, level<1>{});
 }
 
-template<typename C>
+template <typename C>
 auto beginIterator(C &container, level<2>) -> decltype(container.cbegin(), typename C::const_iterator())
 {
     return container.cbegin();
 }
 
-template<typename C>
+template <typename C>
 auto beginIterator(C &container, level<1>) -> decltype(container.constBegin(), typename C::const_iterator())
 {
     return container.constBegin();
 }
 
-template<typename C>
+template <typename C>
 auto beginIterator(C &container, level<0>) -> decltype(container.begin(), typename C::iterator())
 {
     return container.begin();
 }
 
 //Caller
-template<typename C> auto beginIterator(C &container) {
+template <typename C>
+auto beginIterator(C &container)
+{
     return beginIterator(container, level<2>{});
 }
 
-template<typename C>
+template <typename C>
 auto endIterator(C &container, level<2>) -> decltype(container.cend(), typename C::const_iterator())
 {
     return container.cend();
 }
 
-template<typename C>
+template <typename C>
 auto endIterator(C &container, level<1>) -> decltype(container.constEnd(), typename C::const_iterator())
 {
     return container.constEnd();
 }
 
-template<typename C>
+template <typename C>
 auto endIterator(C &container, level<0>) -> decltype(container.end(), typename C::iterator())
 {
     return container.end();
 }
 
 //Caller
-template<typename C> auto endIterator(C &container) {
+template <typename C>
+auto endIterator(C &container)
+{
     return endIterator(container, level<2>{});
 }
 
 //TODO: remove this workaround with wrapper for const_cast after msvc fix its INTERNAL COMPILER ERROR
-template<typename T> T & constCastWrapper(const T &ref)
+template <typename T>
+T &constCastWrapper(const T &ref)
 {
     return const_cast<T &>(ref);
 }
-}
+} // namespace detail
 
-template<typename Container, typename Predicate>
+template <typename Container, typename Predicate>
 auto eraseIf(Container &container, const Predicate &predicate)
--> decltype(predicate(detail::beginIterator(container).key(), detail::beginIterator(container).value()),
-            void())
+    -> decltype(predicate(detail::beginIterator(container).key(), detail::beginIterator(container).value()), void())
 {
     for (auto it = container.begin(); it != container.end();) {
         if (predicate(it.key(), it.value()))
@@ -117,24 +129,22 @@ auto eraseIf(Container &container, const Predicate &predicate)
     }
 }
 
-template<typename Container, typename Predicate>
+template <typename Container, typename Predicate>
 auto eraseIf(Container &container, const Predicate &predicate)
--> decltype(predicate(*(detail::beginIterator(container))),
-            void())
+    -> decltype(predicate(*(detail::beginIterator(container))), void())
 {
     container.erase(std::remove_if(container.begin(), container.end(), predicate), container.end());
 }
 
-template<typename Container>
+template <typename Container>
 void makeUnique(Container &container)
 {
     container.erase(std::unique(container.begin(), container.end()), container.end());
 }
 
-template<typename Container, typename Predicate, typename Result = typename Container::value_type>
+template <typename Container, typename Predicate, typename Result = typename Container::value_type>
 auto findIf(const Container &container, const Predicate &predicate, const Result &defaultValue = Result())
--> decltype(predicate(*(detail::beginIterator(container))),
-            Result())
+    -> decltype(predicate(*(detail::beginIterator(container))), Result())
 {
     auto it = detail::beginIterator(container);
     auto end = detail::endIterator(container);
@@ -145,10 +155,10 @@ auto findIf(const Container &container, const Predicate &predicate, const Result
     return defaultValue;
 }
 
-template<typename Container, typename Predicate, typename Result = QPair<typename Container::key_type, typename Container::mapped_type>>
+template <typename Container, typename Predicate,
+          typename Result = QPair<typename Container::key_type, typename Container::mapped_type>>
 auto findIf(const Container &container, const Predicate &predicate, const Result &defaultValue = Result())
--> decltype(predicate(detail::beginIterator(container).key(), detail::beginIterator(container).value()),
-            Result())
+    -> decltype(predicate(detail::beginIterator(container).key(), detail::beginIterator(container).value()), Result())
 {
     auto it = detail::beginIterator(container);
     auto end = detail::endIterator(container);
@@ -159,10 +169,9 @@ auto findIf(const Container &container, const Predicate &predicate, const Result
     return defaultValue;
 }
 
-template<typename Container, typename Predicate>
+template <typename Container, typename Predicate>
 auto exists(const Container &container, const Predicate &predicate)
--> decltype(predicate(*(detail::beginIterator(container))),
-            bool())
+    -> decltype(predicate(*(detail::beginIterator(container))), bool())
 {
     auto it = detail::beginIterator(container);
     auto end = detail::endIterator(container);
@@ -173,10 +182,9 @@ auto exists(const Container &container, const Predicate &predicate)
     return false;
 }
 
-template<typename Container, typename Predicate>
+template <typename Container, typename Predicate>
 auto exists(const Container &container, const Predicate &predicate)
--> decltype(predicate(detail::beginIterator(container).key(), detail::beginIterator(container).value()),
-            bool())
+    -> decltype(predicate(detail::beginIterator(container).key(), detail::beginIterator(container).value()), bool())
 {
     auto it = detail::beginIterator(container);
     auto end = detail::endIterator(container);
@@ -187,10 +195,9 @@ auto exists(const Container &container, const Predicate &predicate)
     return false;
 }
 
-template<typename Container, typename Predicate>
+template <typename Container, typename Predicate>
 auto forAll(const Container &container, const Predicate &predicate)
--> decltype(predicate(*(detail::beginIterator(container))),
-            bool())
+    -> decltype(predicate(*(detail::beginIterator(container))), bool())
 {
     auto it = detail::beginIterator(container);
     auto end = detail::endIterator(container);
@@ -201,10 +208,9 @@ auto forAll(const Container &container, const Predicate &predicate)
     return true;
 }
 
-template<typename Container, typename Predicate>
+template <typename Container, typename Predicate>
 auto forAll(const Container &container, const Predicate &predicate)
--> decltype(predicate(detail::beginIterator(container).key(), detail::beginIterator(container).value()),
-            bool())
+    -> decltype(predicate(detail::beginIterator(container).key(), detail::beginIterator(container).value()), bool())
 {
     auto it = detail::beginIterator(container);
     auto end = detail::endIterator(container);
@@ -215,11 +221,10 @@ auto forAll(const Container &container, const Predicate &predicate)
     return true;
 }
 
-template<typename Container, typename Predicate,
-         typename = typename std::enable_if_t<!Proof::detail::HasTypeParams<Container>::value>>
+template <typename Container, typename Predicate,
+          typename = typename std::enable_if_t<!Proof::detail::HasTypeParams<Container>::value>>
 auto forEach(const Container &container, const Predicate &predicate)
--> decltype(predicate(*(detail::beginIterator(container))),
-            void())
+    -> decltype(predicate(*(detail::beginIterator(container))), void())
 {
     auto it = detail::beginIterator(container);
     auto end = detail::endIterator(container);
@@ -227,11 +232,10 @@ auto forEach(const Container &container, const Predicate &predicate)
         predicate(*it);
 }
 
-template<typename Container, typename Predicate,
-         typename = typename std::enable_if_t<!Proof::detail::HasTypeParams<Container>::value>>
+template <typename Container, typename Predicate,
+          typename = typename std::enable_if_t<!Proof::detail::HasTypeParams<Container>::value>>
 auto forEach(const Container &container, const Predicate &predicate)
--> decltype(predicate(0ll, *(detail::beginIterator(container))),
-            void())
+    -> decltype(predicate(0ll, *(detail::beginIterator(container))), void())
 {
     auto it = detail::beginIterator(container);
     auto end = detail::endIterator(container);
@@ -240,10 +244,9 @@ auto forEach(const Container &container, const Predicate &predicate)
         predicate(++counter, *it);
 }
 
-template<template<typename...> class Container, typename Input, typename Predicate>
+template <template <typename...> class Container, typename Input, typename Predicate>
 auto forEach(const Container<Input> &container, const Predicate &predicate)
--> decltype(predicate(*(detail::beginIterator(container))),
-            void())
+    -> decltype(predicate(*(detail::beginIterator(container))), void())
 {
     auto it = detail::beginIterator(container);
     auto end = detail::endIterator(container);
@@ -251,10 +254,9 @@ auto forEach(const Container<Input> &container, const Predicate &predicate)
         predicate(*it);
 }
 
-template<template<typename...> class Container, typename Input, typename Predicate>
+template <template <typename...> class Container, typename Input, typename Predicate>
 auto forEach(const Container<Input> &container, const Predicate &predicate)
--> decltype(predicate(0ll, *(detail::beginIterator(container))),
-            void())
+    -> decltype(predicate(0ll, *(detail::beginIterator(container))), void())
 {
     auto it = detail::beginIterator(container);
     auto end = detail::endIterator(container);
@@ -263,10 +265,9 @@ auto forEach(const Container<Input> &container, const Predicate &predicate)
         predicate(++counter, *it);
 }
 
-template<template<typename...> class Container, typename InputKey, typename InputValue, typename Predicate>
+template <template <typename...> class Container, typename InputKey, typename InputValue, typename Predicate>
 auto forEach(const Container<InputKey, InputValue> &container, const Predicate &predicate)
--> decltype(predicate(detail::beginIterator(container).key(), detail::beginIterator(container).value()),
-            void())
+    -> decltype(predicate(detail::beginIterator(container).key(), detail::beginIterator(container).value()), void())
 {
     auto it = detail::beginIterator(container);
     auto end = detail::endIterator(container);
@@ -278,11 +279,10 @@ auto forEach(const Container<InputKey, InputValue> &container, const Predicate &
 // It is fine for almost all our cases with DTOs and PODs, but still is O(n).
 // O(n) though is good enough for our amounts of data.
 // If ever lazy variant will be needed probably we will need to use boost ranges or something similar then.
-template<typename Container, typename Predicate>
+template <typename Container, typename Predicate>
 auto filter(const Container &container, const Predicate &predicate)
--> decltype(detail::addToContainer(detail::constCastWrapper(container), *(detail::beginIterator(container))),
-            predicate(*(detail::beginIterator(container))),
-            Container())
+    -> decltype(detail::addToContainer(detail::constCastWrapper(container), *(detail::beginIterator(container))),
+                predicate(*(detail::beginIterator(container))), Container())
 {
     Container result;
     auto it = detail::beginIterator(container);
@@ -294,11 +294,10 @@ auto filter(const Container &container, const Predicate &predicate)
     return result;
 }
 
-template<typename Container, typename Predicate>
+template <typename Container, typename Predicate>
 auto filter(const Container &container, const Predicate &predicate)
--> decltype(detail::addToContainer(detail::constCastWrapper(container), detail::beginIterator(container)),
-            predicate(detail::beginIterator(container).key(), detail::beginIterator(container).value()),
-            Container())
+    -> decltype(detail::addToContainer(detail::constCastWrapper(container), detail::beginIterator(container)),
+                predicate(detail::beginIterator(container).key(), detail::beginIterator(container).value()), Container())
 {
     Container result;
     auto it = detail::beginIterator(container);
@@ -311,11 +310,10 @@ auto filter(const Container &container, const Predicate &predicate)
 }
 
 //Non-socketed type without indices
-template<typename Container, typename Predicate, typename Result,
-         typename = typename std::enable_if_t<!Proof::detail::HasTypeParams<Container>::value>>
+template <typename Container, typename Predicate, typename Result,
+          typename = typename std::enable_if_t<!Proof::detail::HasTypeParams<Container>::value>>
 auto map(const Container &container, const Predicate &predicate, Result destination)
--> decltype(detail::addToContainer(destination, predicate(*(detail::beginIterator(container)))),
-            Result())
+    -> decltype(detail::addToContainer(destination, predicate(*(detail::beginIterator(container)))), Result())
 {
     auto it = detail::beginIterator(container);
     auto end = detail::endIterator(container);
@@ -326,11 +324,10 @@ auto map(const Container &container, const Predicate &predicate, Result destinat
 }
 
 //Non-socketed type with indices
-template<typename Container, typename Predicate, typename Result,
-         typename = typename std::enable_if_t<!Proof::detail::HasTypeParams<Container>::value>>
+template <typename Container, typename Predicate, typename Result,
+          typename = typename std::enable_if_t<!Proof::detail::HasTypeParams<Container>::value>>
 auto map(const Container &container, const Predicate &predicate, Result destination)
--> decltype(detail::addToContainer(destination, predicate(0ll, *(detail::beginIterator(container)))),
-            Result())
+    -> decltype(detail::addToContainer(destination, predicate(0ll, *(detail::beginIterator(container)))), Result())
 {
     auto it = detail::beginIterator(container);
     auto end = detail::endIterator(container);
@@ -342,11 +339,9 @@ auto map(const Container &container, const Predicate &predicate, Result destinat
 }
 
 //Single socketed type without indices
-template<template<typename...> class Container, typename Input,
-         typename Predicate, typename Result>
+template <template <typename...> class Container, typename Input, typename Predicate, typename Result>
 auto map(const Container<Input> &container, const Predicate &predicate, Result destination)
--> decltype(detail::addToContainer(destination, predicate(*(detail::beginIterator(container)))),
-            Result())
+    -> decltype(detail::addToContainer(destination, predicate(*(detail::beginIterator(container)))), Result())
 {
     auto it = detail::beginIterator(container);
     auto end = detail::endIterator(container);
@@ -357,11 +352,9 @@ auto map(const Container<Input> &container, const Predicate &predicate, Result d
 }
 
 //Single socketed type with indices
-template<template<typename...> class Container, typename Input,
-         typename Predicate, typename Result>
+template <template <typename...> class Container, typename Input, typename Predicate, typename Result>
 auto map(const Container<Input> &container, const Predicate &predicate, Result destination)
--> decltype(detail::addToContainer(destination, predicate(0ll, *(detail::beginIterator(container)))),
-            Result())
+    -> decltype(detail::addToContainer(destination, predicate(0ll, *(detail::beginIterator(container)))), Result())
 {
     auto it = detail::beginIterator(container);
     auto end = detail::endIterator(container);
@@ -373,11 +366,11 @@ auto map(const Container<Input> &container, const Predicate &predicate, Result d
 }
 
 //Double socketed Qt type
-template<template<typename...> class Container, typename InputKey, typename InputValue,
-         typename Predicate, typename Result>
+template <template <typename...> class Container, typename InputKey, typename InputValue, typename Predicate, typename Result>
 auto map(const Container<InputKey, InputValue> &container, const Predicate &predicate, Result destination)
--> decltype(detail::addToContainer(destination, predicate(detail::beginIterator(container).key(), detail::beginIterator(container).value())),
-            Result())
+    -> decltype(detail::addToContainer(destination, predicate(detail::beginIterator(container).key(),
+                                                              detail::beginIterator(container).value())),
+                Result())
 {
     auto it = detail::beginIterator(container);
     auto end = detail::endIterator(container);
@@ -388,11 +381,11 @@ auto map(const Container<InputKey, InputValue> &container, const Predicate &pred
 }
 
 //Double socketed stl type
-template<template<typename...> class Container, typename InputKey, typename InputValue,
-         typename Predicate, typename Result>
+template <template <typename...> class Container, typename InputKey, typename InputValue, typename Predicate, typename Result>
 auto map(const Container<InputKey, InputValue> &container, const Predicate &predicate, Result destination)
--> decltype(detail::addToContainer(destination, predicate(detail::beginIterator(container)->first, detail::beginIterator(container)->second)),
-            Result())
+    -> decltype(detail::addToContainer(destination, predicate(detail::beginIterator(container)->first,
+                                                              detail::beginIterator(container)->second)),
+                Result())
 {
     auto it = detail::beginIterator(container);
     auto end = detail::endIterator(container);
@@ -403,39 +396,34 @@ auto map(const Container<InputKey, InputValue> &container, const Predicate &pred
 }
 
 //Single socketed type without indices, short version
-template<template<typename...> class Container, typename Input,
-         typename Predicate>
+template <template <typename...> class Container, typename Input, typename Predicate>
 auto map(const Container<Input> &container, const Predicate &predicate)
--> decltype (predicate(*(detail::beginIterator(container))),
-             Container<typename std::result_of_t<Predicate(Input)>>())
+    -> decltype(predicate(*(detail::beginIterator(container))), Container<typename std::result_of_t<Predicate(Input)>>())
 {
     return map(container, predicate, Container<typename std::result_of_t<Predicate(Input)>>());
 }
 
 //Single socketed type with indices, short version
-template<template<typename...> class Container, typename Input,
-         typename Predicate>
+template <template <typename...> class Container, typename Input, typename Predicate>
 auto map(const Container<Input> &container, const Predicate &predicate)
--> decltype (predicate(0ll, *(detail::beginIterator(container))),
-             Container<typename std::result_of_t<Predicate(long long, Input)>>())
+    -> decltype(predicate(0ll, *(detail::beginIterator(container))),
+                Container<typename std::result_of_t<Predicate(long long, Input)>>())
 {
     return map(container, predicate, Container<typename std::result_of_t<Predicate(long long, Input)>>());
 }
 
 //Double socketed type, short version
-template<template<typename...> class Container, typename InputKey, typename InputValue,
-         typename Predicate,
-         typename OutputKey = typename std::result_of_t<Predicate(InputKey, InputValue)>::first_type,
-         typename OutputValue = typename std::result_of_t<Predicate(InputKey, InputValue)>::second_type>
+template <template <typename...> class Container, typename InputKey, typename InputValue, typename Predicate,
+          typename OutputKey = typename std::result_of_t<Predicate(InputKey, InputValue)>::first_type,
+          typename OutputValue = typename std::result_of_t<Predicate(InputKey, InputValue)>::second_type>
 Container<OutputKey, OutputValue> map(const Container<InputKey, InputValue> &container, const Predicate &predicate)
 {
     return map(container, predicate, Container<OutputKey, OutputValue>());
 }
 
-template<typename Container, typename Predicate, typename Result>
+template <typename Container, typename Predicate, typename Result>
 auto reduce(const Container &container, const Predicate &predicate, Result acc)
--> decltype(acc = predicate(acc, *(detail::beginIterator(container))),
-            Result())
+    -> decltype(acc = predicate(acc, *(detail::beginIterator(container))), Result())
 {
     auto it = detail::beginIterator(container);
     auto end = detail::endIterator(container);
@@ -444,10 +432,10 @@ auto reduce(const Container &container, const Predicate &predicate, Result acc)
     return acc;
 }
 
-template<typename Container, typename Predicate, typename Result>
+template <typename Container, typename Predicate, typename Result>
 auto reduce(const Container &container, const Predicate &predicate, Result acc)
--> decltype(acc = predicate(acc, detail::beginIterator(container).key(), detail::beginIterator(container).value()),
-            Result())
+    -> decltype(acc = predicate(acc, detail::beginIterator(container).key(), detail::beginIterator(container).value()),
+                Result())
 {
     auto it = detail::beginIterator(container);
     auto end = detail::endIterator(container);
@@ -456,10 +444,10 @@ auto reduce(const Container &container, const Predicate &predicate, Result acc)
     return acc;
 }
 
-template<template<typename...> class Container1, template<typename...> class Container2, typename Input, typename Result>
+template <template <typename...> class Container1, template <typename...> class Container2, typename Input, typename Result>
 auto flatten(const Container1<Container2<Input>> &container, Result destination)
--> decltype(detail::addToContainer(destination, *(detail::beginIterator(*(detail::beginIterator(container))))),
-            Result())
+    -> decltype(detail::addToContainer(destination, *(detail::beginIterator(*(detail::beginIterator(container))))),
+                Result())
 {
     long long estimatedSize = 0;
     int estimationsLeft = 100;
@@ -479,19 +467,17 @@ auto flatten(const Container1<Container2<Input>> &container, Result destination)
     return destination;
 }
 
-template<template<typename...> class Container1, template<typename...> class Container2, typename Input>
+template <template <typename...> class Container1, template <typename...> class Container2, typename Input>
 Container1<Input> flatten(const Container1<Container2<Input>> &container)
 {
     return flatten(container, Container1<Input>());
 }
 
-
-template<template<typename...> class Container1, template<typename...> class Container2, typename Input,
-         typename Predicate, typename Result>
+template <template <typename...> class Container1, template <typename...> class Container2, typename Input,
+          typename Predicate, typename Result>
 auto flatFilter(const Container1<Container2<Input>> &container, const Predicate &predicate, Result destination)
--> decltype(detail::addToContainer(destination, *(detail::beginIterator(*(detail::beginIterator(container))))),
-            predicate(*(detail::beginIterator(*(detail::beginIterator(container))))),
-            Result())
+    -> decltype(detail::addToContainer(destination, *(detail::beginIterator(*(detail::beginIterator(container))))),
+                predicate(*(detail::beginIterator(*(detail::beginIterator(container))))), Result())
 {
     auto outerIt = detail::beginIterator(container);
     auto outerEnd = detail::endIterator(container);
@@ -506,13 +492,12 @@ auto flatFilter(const Container1<Container2<Input>> &container, const Predicate 
     return destination;
 }
 
-template<template<typename...> class Container1, template<typename...> class Container2, typename Input,
-         typename Predicate>
+template <template <typename...> class Container1, template <typename...> class Container2, typename Input, typename Predicate>
 Container1<Input> flatFilter(const Container1<Container2<Input>> &container, const Predicate &predicate)
 {
     return flatFilter(container, predicate, Container1<Input>());
 }
-}
-}
+} // namespace algorithms
+} // namespace Proof
 
 #endif // PROOFALGORITHMS_H

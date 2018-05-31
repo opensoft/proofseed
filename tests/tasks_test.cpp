@@ -1,15 +1,15 @@
 // clazy:skip
 
-#include "gtest/test_global.h"
-
-#include "proofcore/tasks.h"
 #include "proofcore/future.h"
 #include "proofcore/proofalgorithms.h"
+#include "proofcore/tasks.h"
 
-#include <QThread>
 #include <QDateTime>
-#include <QTimer>
 #include <QPair>
+#include <QThread>
+#include <QTimer>
+
+#include "gtest/test_global.h"
 
 using namespace Proof;
 using namespace Proof::tasks;
@@ -19,19 +19,21 @@ inline quint64 currentThread()
 {
     return reinterpret_cast<quint64>(QThread::currentThread());
 }
-template <typename T> using Result = QPair<quint64, T>;
-template<typename T>
+template <typename T>
+using Result = QPair<quint64, T>;
+template <typename T>
 Result<T> pairedResult(const T &v)
 {
     return qMakePair(currentThread(), v);
 }
-}
+} // namespace
 
 TEST(TasksTest, capacities)
 {
     auto dispatcher = TasksDispatcher::instance();
     EXPECT_GE(dispatcher->capacity(), dispatcher->restrictorCapacity(RestrictionType::Intensive));
-    EXPECT_GE(dispatcher->capacity(), dispatcher->restrictorCapacity(RestrictionType::Custom, "some_unique_restrictor"));
+    EXPECT_GE(dispatcher->capacity(),
+              dispatcher->restrictorCapacity(RestrictionType::Custom, "some_unique_restrictor"));
     EXPECT_EQ(dispatcher->capacity(), dispatcher->restrictorCapacity(RestrictionType::Custom));
     EXPECT_NE(2, dispatcher->restrictorCapacity(RestrictionType::Custom, "some_unique_restrictor_2"));
     dispatcher->addCustomRestrictor("some_unique_restrictor_2", 2);
@@ -41,7 +43,7 @@ TEST(TasksTest, capacities)
 
 TEST(TasksTest, singleTask)
 {
-    Result<int> result = run([](){return pairedResult(42);})->result();
+    Result<int> result = run([]() { return pairedResult(42); })->result();
     EXPECT_NE(currentThread(), result.first);
     EXPECT_EQ(42, result.second);
 }
@@ -49,9 +51,7 @@ TEST(TasksTest, singleTask)
 TEST(TasksTest, singleDeferredTask)
 {
     PromiseSP<int> innerPromise = PromiseSP<int>::create();
-    FutureSP<int> result = run([innerPromise]() {
-        return innerPromise->future();
-    });
+    FutureSP<int> result = run([innerPromise]() { return innerPromise->future(); });
     EXPECT_FALSE(result->completed());
     innerPromise->success(42);
     result->wait(1000);
@@ -63,10 +63,8 @@ TEST(TasksTest, singleDeferredTask)
 
 TEST(TasksTest, singleVoidTask)
 {
-    std::atomic_bool flag {false};
-    FutureSP<bool> result = run([&flag]() {
-        flag = true;
-    });
+    std::atomic_bool flag{false};
+    FutureSP<bool> result = run([&flag]() { flag = true; });
     result->wait(1000);
     ASSERT_TRUE(result->completed());
     EXPECT_TRUE(result->succeeded());
@@ -79,10 +77,15 @@ TEST(TasksTest, taskCancelation)
 {
     tasks::TasksDispatcher::instance()->addCustomRestrictor("single", 1);
     PromiseSP<int> blockingPromise = PromiseSP<int>::create();
-    run([blockingPromise]() {blockingPromise->future()->wait();}, RestrictionType::Custom, "single");
-    std::atomic_bool executed {false};
-    CancelableFuture<int> f = run([&executed](){executed = true; return 42;}, RestrictionType::Custom, "single");
-    CancelableFuture<int> f2 = run([](){return 42;}, RestrictionType::Custom, "single");
+    run([blockingPromise]() { blockingPromise->future()->wait(); }, RestrictionType::Custom, "single");
+    std::atomic_bool executed{false};
+    CancelableFuture<int> f = run(
+        [&executed]() {
+            executed = true;
+            return 42;
+        },
+        RestrictionType::Custom, "single");
+    CancelableFuture<int> f2 = run([]() { return 42; }, RestrictionType::Custom, "single");
     f.cancel();
     blockingPromise->success(1);
     f->wait(1000);
@@ -101,11 +104,16 @@ TEST(TasksTest, deferedTaskCancelation)
 {
     tasks::TasksDispatcher::instance()->addCustomRestrictor("single", 1);
     PromiseSP<int> blockingPromise = PromiseSP<int>::create();
-    run([blockingPromise]() {return blockingPromise->future()->wait();}, RestrictionType::Custom, "single");
-    std::atomic_bool executed {false};
+    run([blockingPromise]() { return blockingPromise->future()->wait(); }, RestrictionType::Custom, "single");
+    std::atomic_bool executed{false};
     PromiseSP<int> innerPromise = PromiseSP<int>::create();
-    CancelableFuture<int> f = run([innerPromise, &executed]() {executed = true; return innerPromise->future();}, RestrictionType::Custom, "single");
-    CancelableFuture<int> f2 = run([](){return 42;}, RestrictionType::Custom, "single");
+    CancelableFuture<int> f = run(
+        [innerPromise, &executed]() {
+            executed = true;
+            return innerPromise->future();
+        },
+        RestrictionType::Custom, "single");
+    CancelableFuture<int> f2 = run([]() { return 42; }, RestrictionType::Custom, "single");
     f.cancel();
     blockingPromise->success(1);
     f->wait(1000);
@@ -124,10 +132,10 @@ TEST(TasksTest, voidTaskCancelation)
 {
     tasks::TasksDispatcher::instance()->addCustomRestrictor("single", 1);
     PromiseSP<int> blockingPromise = PromiseSP<int>::create();
-    run([blockingPromise]() {return blockingPromise->future()->wait();}, RestrictionType::Custom, "single");
-    std::atomic_bool executed {false};
-    CancelableFuture<bool> f = run([&executed](){executed = true;}, RestrictionType::Custom, "single");
-    CancelableFuture<int> f2 = run([](){return 42;}, RestrictionType::Custom, "single");
+    run([blockingPromise]() { return blockingPromise->future()->wait(); }, RestrictionType::Custom, "single");
+    std::atomic_bool executed{false};
+    CancelableFuture<bool> f = run([&executed]() { executed = true; }, RestrictionType::Custom, "single");
+    CancelableFuture<int> f2 = run([]() { return 42; }, RestrictionType::Custom, "single");
     f.cancel();
     blockingPromise->success(1);
     f->wait(1000);
@@ -145,9 +153,7 @@ TEST(TasksTest, voidTaskCancelation)
 TEST(TasksTest, singleDeferredTaskWithFailure)
 {
     PromiseSP<int> innerPromise = PromiseSP<int>::create();
-    FutureSP<int> result = run([innerPromise]() {
-        return innerPromise->future();
-    });
+    FutureSP<int> result = run([innerPromise]() { return innerPromise->future(); });
     EXPECT_FALSE(result->completed());
     innerPromise->failure(Failure("failed", 0, 0));
     result->wait(1000);
@@ -160,12 +166,13 @@ TEST(TasksTest, singleDeferredTaskWithFailure)
 
 TEST(TasksTest, multipleTasks)
 {
-    std::atomic_bool ready {false};
+    std::atomic_bool ready{false};
     int n = 5;
     QList<FutureSP<Result<int>>> results;
     for (int i = 0; i < n; ++i) {
-        results << run([&ready, i](){
-            while (!ready);
+        results << run([&ready, i]() {
+            while (!ready)
+                ;
             return pairedResult(i * 2);
         });
     }
@@ -184,20 +191,22 @@ TEST(TasksTest, multipleTasks)
 
 TEST(TasksTest, multipleTasksOverCapacity)
 {
-    std::atomic_bool ready {false};
-    std::atomic_int runCounter {0};
+    std::atomic_bool ready{false};
+    std::atomic_int runCounter{0};
     int n = TasksDispatcher::instance()->capacity() * 2;
     QList<FutureSP<int>> results;
     for (int i = 0; i < n; ++i) {
-        results << run([&ready, &runCounter, i](){
+        results << run([&ready, &runCounter, i]() {
             ++runCounter;
-            while (!ready);
+            while (!ready)
+                ;
             return i * 2;
         });
     }
     QTime timeout;
     timeout.start();
-    while (runCounter < TasksDispatcher::instance()->capacity() && timeout.elapsed() < 1000);
+    while (runCounter < TasksDispatcher::instance()->capacity() && timeout.elapsed() < 1000)
+        ;
     QThread::msleep(25);
     EXPECT_EQ(TasksDispatcher::instance()->capacity(), runCounter);
     for (int i = 0; i < n; ++i)
@@ -207,24 +216,27 @@ TEST(TasksTest, multipleTasksOverCapacity)
         EXPECT_EQ(i * 2, results[i]->result());
 }
 
-
 TEST(TasksTest, multipleIntensiveTasksOverCapacity)
 {
-    std::atomic_bool ready {false};
-    std::atomic_int runCounter {0};
+    std::atomic_bool ready{false};
+    std::atomic_int runCounter{0};
     int capacity = TasksDispatcher::instance()->restrictorCapacity(RestrictionType::Intensive);
     int n = capacity * 2;
     QList<FutureSP<int>> results;
     for (int i = 0; i < n; ++i) {
-        results << run([&ready, &runCounter, i](){
-            ++runCounter;
-            while (!ready);
-            return i * 2;
-        }, RestrictionType::Intensive);
+        results << run(
+            [&ready, &runCounter, i]() {
+                ++runCounter;
+                while (!ready)
+                    ;
+                return i * 2;
+            },
+            RestrictionType::Intensive);
     }
     QTime timeout;
     timeout.start();
-    while (runCounter < capacity && timeout.elapsed() < 1000);
+    while (runCounter < capacity && timeout.elapsed() < 1000)
+        ;
     QThread::msleep(25);
     EXPECT_EQ(capacity, runCounter);
     for (int i = 0; i < n; ++i)
@@ -236,9 +248,9 @@ TEST(TasksTest, multipleIntensiveTasksOverCapacity)
 
 TEST(TasksTest, multipleCustomTasksOverCapacity)
 {
-    std::atomic_bool ready {false};
-    std::atomic_int runCounter {0};
-    std::atomic_int otherRunCounter {0};
+    std::atomic_bool ready{false};
+    std::atomic_int runCounter{0};
+    std::atomic_int otherRunCounter{0};
     int capacity = 2;
     TasksDispatcher::instance()->addCustomRestrictor("test", capacity);
     int fullCapacity = TasksDispatcher::instance()->restrictorCapacity(RestrictionType::Custom, "other");
@@ -246,20 +258,27 @@ TEST(TasksTest, multipleCustomTasksOverCapacity)
     QList<FutureSP<int>> results;
     QList<FutureSP<int>> otherResults;
     for (int i = 0; i < n; ++i) {
-        results << run([&ready, &runCounter, i](){
-            ++runCounter;
-            while (!ready);
-            return i * 2;
-        }, RestrictionType::Custom, "test");
-        otherResults << run([&ready, &otherRunCounter, i](){
-            ++otherRunCounter;
-            while (!ready);
-            return i * 3;
-        }, RestrictionType::Custom, "other");
+        results << run(
+            [&ready, &runCounter, i]() {
+                ++runCounter;
+                while (!ready)
+                    ;
+                return i * 2;
+            },
+            RestrictionType::Custom, "test");
+        otherResults << run(
+            [&ready, &otherRunCounter, i]() {
+                ++otherRunCounter;
+                while (!ready)
+                    ;
+                return i * 3;
+            },
+            RestrictionType::Custom, "other");
     }
     QTime timeout;
     timeout.start();
-    while ((runCounter < capacity || otherRunCounter < fullCapacity) && timeout.elapsed() < 5000);
+    while ((runCounter < capacity || otherRunCounter < fullCapacity) && timeout.elapsed() < 5000)
+        ;
     QThread::msleep(25);
     EXPECT_EQ(capacity, runCounter);
     EXPECT_EQ(fullCapacity, otherRunCounter);
@@ -276,21 +295,25 @@ TEST(TasksTest, multipleCustomTasksOverCapacity)
 
 TEST(TasksTest, restrictedSequenceRun)
 {
-    std::atomic_bool ready {false};
-    std::atomic_int runCounter {0};
+    std::atomic_bool ready{false};
+    std::atomic_int runCounter{0};
     QVector<int> input;
     int capacity = TasksDispatcher::instance()->restrictorCapacity(RestrictionType::Intensive);
     int n = capacity * 2;
     for (int i = 0; i < n; ++i)
         input << i;
-    FutureSP<QVector<int>> future = run(input, [&ready, &runCounter](int x){
-        ++runCounter;
-        while (!ready);
-        return x * 2;
-    }, RestrictionType::Intensive);
+    FutureSP<QVector<int>> future = run(input,
+                                        [&ready, &runCounter](int x) {
+                                            ++runCounter;
+                                            while (!ready)
+                                                ;
+                                            return x * 2;
+                                        },
+                                        RestrictionType::Intensive);
     QTime timeout;
     timeout.start();
-    while (runCounter < capacity && timeout.elapsed() < 1000);
+    while (runCounter < capacity && timeout.elapsed() < 1000)
+        ;
     QThread::msleep(25);
     EXPECT_EQ(capacity, runCounter);
     EXPECT_FALSE(future->completed());
@@ -303,21 +326,23 @@ TEST(TasksTest, restrictedSequenceRun)
 
 TEST(TasksTest, sequenceRun)
 {
-    std::atomic_bool ready {false};
-    std::atomic_int runCounter {0};
+    std::atomic_bool ready{false};
+    std::atomic_int runCounter{0};
     QVector<int> input;
     int capacity = TasksDispatcher::instance()->capacity();
     int n = capacity * 2;
     for (int i = 0; i < n; ++i)
         input << i;
-    FutureSP<QVector<int>> future = run(input, [&ready, &runCounter](int x){
+    FutureSP<QVector<int>> future = run(input, [&ready, &runCounter](int x) {
         ++runCounter;
-        while (!ready);
+        while (!ready)
+            ;
         return x * 2;
     });
     QTime timeout;
     timeout.start();
-    while (runCounter < capacity && timeout.elapsed() < 1000);
+    while (runCounter < capacity && timeout.elapsed() < 1000)
+        ;
     QThread::msleep(25);
     EXPECT_EQ(capacity, runCounter);
     EXPECT_FALSE(future->completed());
@@ -333,8 +358,8 @@ TEST(TasksTest, sequenceRun)
 
 TEST(TasksTest, deferredSequenceRun)
 {
-    std::atomic_bool ready {false};
-    std::atomic_int runCounter {0};
+    std::atomic_bool ready{false};
+    std::atomic_int runCounter{0};
     QVector<int> input;
     int capacity = TasksDispatcher::instance()->capacity();
     int n = capacity * 2;
@@ -342,12 +367,14 @@ TEST(TasksTest, deferredSequenceRun)
         input << i;
     FutureSP<QVector<int>> future = run(input, [&ready, &runCounter](int x) {
         ++runCounter;
-        while (!ready);
+        while (!ready)
+            ;
         return Future<int>::successful(x * 2);
     });
     QTime timeout;
     timeout.start();
-    while (runCounter < capacity && timeout.elapsed() < 1000);
+    while (runCounter < capacity && timeout.elapsed() < 1000)
+        ;
     QThread::msleep(25);
     EXPECT_EQ(capacity, runCounter);
     EXPECT_FALSE(future->completed());
@@ -363,8 +390,8 @@ TEST(TasksTest, deferredSequenceRun)
 
 TEST(TasksTest, voidSequenceRun)
 {
-    std::atomic_bool ready {false};
-    std::atomic_int runCounter {0};
+    std::atomic_bool ready{false};
+    std::atomic_int runCounter{0};
     QVector<int> input;
     int capacity = TasksDispatcher::instance()->capacity();
     int n = capacity * 2;
@@ -372,11 +399,13 @@ TEST(TasksTest, voidSequenceRun)
         input << i;
     FutureSP<bool> future = run(input, [&ready, &runCounter](int) {
         ++runCounter;
-        while (!ready);
+        while (!ready)
+            ;
     });
     QTime timeout;
     timeout.start();
-    while (runCounter < capacity && timeout.elapsed() < 1000);
+    while (runCounter < capacity && timeout.elapsed() < 1000)
+        ;
     QThread::msleep(25);
     EXPECT_EQ(capacity, runCounter);
     EXPECT_FALSE(future->completed());
@@ -390,8 +419,8 @@ TEST(TasksTest, voidSequenceRun)
 
 TEST(TasksTest, sequenceRunWithIndices)
 {
-    std::atomic_bool ready {false};
-    std::atomic_int runCounter {0};
+    std::atomic_bool ready{false};
+    std::atomic_int runCounter{0};
     QVector<int> input;
     int capacity = TasksDispatcher::instance()->capacity();
     int n = capacity * 2;
@@ -399,12 +428,14 @@ TEST(TasksTest, sequenceRunWithIndices)
         input << (n - i);
     FutureSP<QVector<long long>> future = run(input, [n, &ready, &runCounter](long long index, int x) {
         ++runCounter;
-        while (!ready);
+        while (!ready)
+            ;
         return ((n - index) == x) ? index * 2 : -42;
     });
     QTime timeout;
     timeout.start();
-    while (runCounter < capacity && timeout.elapsed() < 1000);
+    while (runCounter < capacity && timeout.elapsed() < 1000)
+        ;
     QThread::msleep(25);
     EXPECT_EQ(capacity, runCounter);
     EXPECT_FALSE(future->completed());
@@ -420,8 +451,8 @@ TEST(TasksTest, sequenceRunWithIndices)
 
 TEST(TasksTest, deferredSequenceRunWithIndices)
 {
-    std::atomic_bool ready {false};
-    std::atomic_int runCounter {0};
+    std::atomic_bool ready{false};
+    std::atomic_int runCounter{0};
     QVector<int> input;
     int capacity = TasksDispatcher::instance()->capacity();
     int n = capacity * 2;
@@ -429,12 +460,14 @@ TEST(TasksTest, deferredSequenceRunWithIndices)
         input << (n - i);
     FutureSP<QVector<long long>> future = run(input, [n, &ready, &runCounter](long long index, int x) {
         ++runCounter;
-        while (!ready);
+        while (!ready)
+            ;
         return Future<long long>::successful(((n - index) == x) ? index * 2 : -42);
     });
     QTime timeout;
     timeout.start();
-    while (runCounter < capacity && timeout.elapsed() < 1000);
+    while (runCounter < capacity && timeout.elapsed() < 1000)
+        ;
     QThread::msleep(25);
     EXPECT_EQ(capacity, runCounter);
     EXPECT_FALSE(future->completed());
@@ -450,8 +483,8 @@ TEST(TasksTest, deferredSequenceRunWithIndices)
 
 TEST(TasksTest, voidSequenceRunWithIndices)
 {
-    std::atomic_bool ready {false};
-    std::atomic_int runCounter {0};
+    std::atomic_bool ready{false};
+    std::atomic_int runCounter{0};
     QVector<int> input;
     int capacity = TasksDispatcher::instance()->capacity();
     int n = capacity * 2;
@@ -459,11 +492,13 @@ TEST(TasksTest, voidSequenceRunWithIndices)
         input << (n - i);
     FutureSP<bool> future = run(input, [&ready, &runCounter](long long, int) {
         ++runCounter;
-        while (!ready);
+        while (!ready)
+            ;
     });
     QTime timeout;
     timeout.start();
-    while (runCounter < capacity && timeout.elapsed() < 1000);
+    while (runCounter < capacity && timeout.elapsed() < 1000)
+        ;
     QThread::msleep(25);
     EXPECT_EQ(capacity, runCounter);
     EXPECT_FALSE(future->completed());
@@ -477,7 +512,7 @@ TEST(TasksTest, voidSequenceRunWithIndices)
 
 TEST(TasksTest, emptySequenceRun)
 {
-    FutureSP<QVector<int>> future = run(QVector<int>(), [](int x){return x * 2;});
+    FutureSP<QVector<int>> future = run(QVector<int>(), [](int x) { return x * 2; });
     future->wait(1000);
     ASSERT_TRUE(future->completed());
     ASSERT_TRUE(future->succeeded());
@@ -487,8 +522,8 @@ TEST(TasksTest, emptySequenceRun)
 
 TEST(TasksTest, clusteredRun)
 {
-    std::atomic_bool ready {false};
-    std::atomic_int runCounter {0};
+    std::atomic_bool ready{false};
+    std::atomic_int runCounter{0};
     SpinLock initialDataLock;
     QList<int> initialData;
     QVector<int> input;
@@ -497,19 +532,23 @@ TEST(TasksTest, clusteredRun)
     int minClusterSize = 5;
     for (int i = 0; i < n; ++i)
         input << i;
-    FutureSP<QVector<int>> future = clusteredRun(input, [&ready, &runCounter, &initialDataLock, &initialData](int x) {
-        if (!ready) {
-            initialDataLock.lock();
-            initialData << x;
-            initialDataLock.unlock();
-        }
-        ++runCounter;
-        while (!ready);
-        return x * 2;
-    }, minClusterSize, RestrictionType::Intensive);
+    FutureSP<QVector<int>> future = clusteredRun(input,
+                                                 [&ready, &runCounter, &initialDataLock, &initialData](int x) {
+                                                     if (!ready) {
+                                                         initialDataLock.lock();
+                                                         initialData << x;
+                                                         initialDataLock.unlock();
+                                                     }
+                                                     ++runCounter;
+                                                     while (!ready)
+                                                         ;
+                                                     return x * 2;
+                                                 },
+                                                 minClusterSize, RestrictionType::Intensive);
     QTime timeout;
     timeout.start();
-    while (runCounter < capacity && timeout.elapsed() < 1000);
+    while (runCounter < capacity && timeout.elapsed() < 1000)
+        ;
     QThread::msleep(25);
     EXPECT_EQ(capacity, runCounter);
     EXPECT_FALSE(future->completed());
@@ -527,7 +566,7 @@ TEST(TasksTest, clusteredRun)
 
 TEST(TasksTest, emptyClusteredRun)
 {
-    FutureSP<QVector<int>> future = clusteredRun(QVector<int>(), [](int x){return x * 2;});
+    FutureSP<QVector<int>> future = clusteredRun(QVector<int>(), [](int x) { return x * 2; });
     future->wait(1000);
     ASSERT_TRUE(future->completed());
     ASSERT_TRUE(future->succeeded());
@@ -537,8 +576,8 @@ TEST(TasksTest, emptyClusteredRun)
 
 TEST(TasksTest, clusteredRunWithExtraBigCluster)
 {
-    std::atomic_bool ready {false};
-    std::atomic_int runCounter {0};
+    std::atomic_bool ready{false};
+    std::atomic_int runCounter{0};
     SpinLock initialDataLock;
     QList<int> initialData;
     QVector<int> input;
@@ -550,19 +589,23 @@ TEST(TasksTest, clusteredRunWithExtraBigCluster)
     int minClusterSize = n / realClustersCount;
     for (int i = 0; i < n; ++i)
         input << i;
-    FutureSP<QVector<int>> future = clusteredRun(input, [&ready, &runCounter, &initialDataLock, &initialData](int x) {
-        if (!ready) {
-            initialDataLock.lock();
-            initialData << x;
-            initialDataLock.unlock();
-        }
-        ++runCounter;
-        while (!ready);
-        return x * 2;
-    }, minClusterSize, RestrictionType::Intensive);
+    FutureSP<QVector<int>> future = clusteredRun(input,
+                                                 [&ready, &runCounter, &initialDataLock, &initialData](int x) {
+                                                     if (!ready) {
+                                                         initialDataLock.lock();
+                                                         initialData << x;
+                                                         initialDataLock.unlock();
+                                                     }
+                                                     ++runCounter;
+                                                     while (!ready)
+                                                         ;
+                                                     return x * 2;
+                                                 },
+                                                 minClusterSize, RestrictionType::Intensive);
     QTime timeout;
     timeout.start();
-    while (runCounter < realClustersCount && timeout.elapsed() < 1000);
+    while (runCounter < realClustersCount && timeout.elapsed() < 1000)
+        ;
     QThread::msleep(25);
     EXPECT_EQ(realClustersCount, runCounter);
     EXPECT_FALSE(future->completed());
@@ -582,7 +625,7 @@ TEST(TasksTest, signalWaiting)
 {
     QThread thread;
     thread.start();
-    std::atomic_bool ready {false};
+    std::atomic_bool ready{false};
     QTimer *timer = new QTimer;
     timer->setSingleShot(true);
     timer->moveToThread(&thread);
@@ -597,7 +640,8 @@ TEST(TasksTest, signalWaiting)
         fireSignalWaiters();
         return result;
     });
-    while (!ready);
+    while (!ready)
+        ;
     EXPECT_FALSE(future->completed());
     QMetaObject::invokeMethod(timer, "start", Qt::BlockingQueuedConnection, Q_ARG(int, 1));
     future->wait(1000);
@@ -610,12 +654,13 @@ TEST(TasksTest, signalWaiting)
 
 TEST(TasksTest, multipleTasksWithFailure)
 {
-    std::atomic_bool ready {false};
+    std::atomic_bool ready{false};
     int n = 5;
     QList<FutureSP<Result<int>>> results;
     for (int i = 0; i < n; ++i) {
         results << run([&ready, i]() -> Result<int> {
-            while (!ready);
+            while (!ready)
+                ;
             if (i % 2)
                 return WithFailure("failed", 0, 0);
             else
@@ -644,13 +689,14 @@ TEST(TasksTest, multipleTasksWithFailure)
 
 TEST(TasksTest, sequenceRunWithFailure)
 {
-    std::atomic_bool ready {false};
+    std::atomic_bool ready{false};
     QVector<int> input;
     int n = 5;
     for (int i = 0; i < n; ++i)
         input << i;
     FutureSP<QVector<int>> future = run(input, [&ready](int x) -> int {
-        while (!ready);
+        while (!ready)
+            ;
         if (x == 3)
             return WithFailure("failed", 0, 0);
         return x * 2;
@@ -665,17 +711,20 @@ TEST(TasksTest, sequenceRunWithFailure)
 
 TEST(TasksTest, clusteredRunWithFailure)
 {
-    std::atomic_bool ready {false};
+    std::atomic_bool ready{false};
     QVector<int> input;
     int n = 20;
     for (int i = 0; i < n; ++i)
         input << i;
-    FutureSP<QVector<int>> future = clusteredRun(input, [&ready](int x) -> int {
-        while (!ready);
-        if (x == 3)
-            return WithFailure("failed", 0, 0);
-        return x * 2;
-    }, 5);
+    FutureSP<QVector<int>> future = clusteredRun(input,
+                                                 [&ready](int x) -> int {
+                                                     while (!ready)
+                                                         ;
+                                                     if (x == 3)
+                                                         return WithFailure("failed", 0, 0);
+                                                     return x * 2;
+                                                 },
+                                                 5);
     ready = true;
     future->wait(1000);
     ASSERT_TRUE(future->completed());
@@ -686,14 +735,13 @@ TEST(TasksTest, clusteredRunWithFailure)
 
 TEST(TasksTest, mappedTaskWithFailure)
 {
-    std::atomic_bool ready {false};
+    std::atomic_bool ready{false};
     FutureSP<int> future = run([&ready]() {
-        while (!ready);
+        while (!ready)
+            ;
         return 42;
     });
-    FutureSP<int> mappedFuture = future->map([](int x) -> int {
-        return WithFailure(x);
-    });
+    FutureSP<int> mappedFuture = future->map([](int x) -> int { return WithFailure(x); });
     EXPECT_FALSE(future->completed());
     ready = true;
     mappedFuture->wait(1000);
@@ -708,11 +756,12 @@ TEST(TasksTest, mappedTaskWithFailure)
 
 TEST(TasksTest, threadBinding)
 {
-    std::atomic_bool firstCanStart {false};
-    std::atomic_bool secondStarted {false};
+    std::atomic_bool firstCanStart{false};
+    std::atomic_bool secondStarted{false};
 
     auto first = [&firstCanStart]() {
-        while (!firstCanStart);
+        while (!firstCanStart)
+            ;
         return pairedResult(1);
     };
 
@@ -737,9 +786,7 @@ TEST(TasksTest, threadBinding)
 
 TEST(TasksTest, threadBindingToDifferentKeys)
 {
-    auto task = []() {
-        return pairedResult(1);
-    };
+    auto task = []() { return pairedResult(1); };
 
     QList<FutureSP<Result<int>>> firstResults;
     QList<FutureSP<Result<int>>> secondResults;
@@ -770,9 +817,7 @@ TEST(TasksTest, threadBindingToDifferentKeys)
 
 TEST(TasksTest, threadBindingAmongNormalTasks)
 {
-    auto task = []() {
-        return pairedResult(1);
-    };
+    auto task = []() { return pairedResult(1); };
 
     QList<FutureSP<Result<int>>> boundResults;
     QList<FutureSP<Result<int>>> otherResults;
@@ -800,9 +845,7 @@ TEST(TasksTest, threadBindingAmongNormalTasks)
 
 TEST(TasksTest, threadBindingToDifferentKeysAmongOtherTasks)
 {
-    auto task = []() {
-        return pairedResult(1);
-    };
+    auto task = []() { return pairedResult(1); };
 
     QList<FutureSP<Result<int>>> firstResults;
     QList<FutureSP<Result<int>>> secondResults;

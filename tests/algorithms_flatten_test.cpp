@@ -1,16 +1,17 @@
 // clazy:skip
 
-#include "gtest/test_global.h"
-
 #include "proofcore/proofalgorithms.h"
 
+#include <QJsonArray>
 #include <QList>
-#include <QVector>
+#include <QMap>
 #include <QSet>
+#include <QVector>
+
+#include "gtest/test_global.h"
+
 #include <set>
 #include <vector>
-#include <QMap>
-#include <QJsonArray>
 
 using namespace Proof;
 
@@ -79,7 +80,7 @@ TEST(AlgorithmsTest, flattenQListQListShort)
     QList<int> resultList = algorithms::flatten(testContainer);
 
     ASSERT_EQ(9, resultList.count());
-    for (int i = 0; i < 9; ++i) 
+    for (int i = 0; i < 9; ++i)
         EXPECT_EQ(i + 1, resultList[i]);
 }
 
@@ -89,7 +90,7 @@ TEST(AlgorithmsTest, flattenQVectorQListShort)
     QVector<int> resultVector = algorithms::flatten(testContainer);
 
     ASSERT_EQ(9, resultVector.count());
-    for (int i = 0; i < 9; ++i) 
+    for (int i = 0; i < 9; ++i)
         EXPECT_EQ(i + 1, resultVector[i]);
 }
 
@@ -100,16 +101,16 @@ TEST(AlgorithmsTest, flattenQVectorQSetShort)
 
     ASSERT_EQ(9, resultVector.count());
     std::sort(resultVector.begin(), resultVector.end());
-    for (int i = 0; i < 9; ++i) 
+    for (int i = 0; i < 9; ++i)
         EXPECT_EQ(i + 1, resultVector[i]);
 }
 
 TEST(AlgorithmsTest, flatFilterQListQList)
 {
     QList<QList<int>> testContainer = {{0}, {1, 2, 3}, {4, 5}, {}, {6, 7, 8, 9}, {10, 11, 12, 13, 14}, {15, 16}};
-    QList<int> resultList = algorithms::flatFilter(testContainer, [](int x){return !(x % 2);}, QList<int>());
-    QVector<int> resultVector = algorithms::flatFilter(testContainer, [](int x){return !(x % 2);}, QVector<int>());
-    QSet<int> resultSet = algorithms::flatFilter(testContainer, [](int x){return !(x % 2);}, QSet<int>());
+    QList<int> resultList = algorithms::flatFilter(testContainer, [](int x) { return !(x % 2); }, QList<int>());
+    QVector<int> resultVector = algorithms::flatFilter(testContainer, [](int x) { return !(x % 2); }, QVector<int>());
+    QSet<int> resultSet = algorithms::flatFilter(testContainer, [](int x) { return !(x % 2); }, QSet<int>());
 
     ASSERT_EQ(9, resultList.count());
     ASSERT_EQ(9, resultVector.count());
@@ -126,9 +127,9 @@ TEST(AlgorithmsTest, flatFilterQListQList)
 TEST(AlgorithmsTest, flatFilterQVectorQList)
 {
     QVector<QList<int>> testContainer = {{0}, {1, 2, 3}, {4, 5}, {}, {6, 7, 8, 9}, {10, 11, 12, 13, 14}, {15, 16}};
-    QList<int> resultList = algorithms::flatFilter(testContainer, [](int x){return !(x % 2);}, QList<int>());
-    QVector<int> resultVector = algorithms::flatFilter(testContainer, [](int x){return !(x % 2);}, QVector<int>());
-    QSet<int> resultSet = algorithms::flatFilter(testContainer, [](int x){return !(x % 2);}, QSet<int>());
+    QList<int> resultList = algorithms::flatFilter(testContainer, [](int x) { return !(x % 2); }, QList<int>());
+    QVector<int> resultVector = algorithms::flatFilter(testContainer, [](int x) { return !(x % 2); }, QVector<int>());
+    QSet<int> resultSet = algorithms::flatFilter(testContainer, [](int x) { return !(x % 2); }, QSet<int>());
 
     ASSERT_EQ(9, resultList.count());
     ASSERT_EQ(9, resultVector.count());
@@ -145,9 +146,9 @@ TEST(AlgorithmsTest, flatFilterQVectorQList)
 TEST(AlgorithmsTest, flatFilterQVectorQSet)
 {
     QVector<QSet<int>> testContainer = {{0}, {1, 2, 3}, {4, 5}, {}, {6, 7, 8, 9}, {10, 11, 12, 13, 14}, {15, 16}};
-    QList<int> resultList = algorithms::flatFilter(testContainer, [](int x){return !(x % 2);}, QList<int>());
-    QVector<int> resultVector = algorithms::flatFilter(testContainer, [](int x){return !(x % 2);}, QVector<int>());
-    QSet<int> resultSet = algorithms::flatFilter(testContainer, [](int x){return !(x % 2);}, QSet<int>());
+    QList<int> resultList = algorithms::flatFilter(testContainer, [](int x) { return !(x % 2); }, QList<int>());
+    QVector<int> resultVector = algorithms::flatFilter(testContainer, [](int x) { return !(x % 2); }, QVector<int>());
+    QSet<int> resultSet = algorithms::flatFilter(testContainer, [](int x) { return !(x % 2); }, QSet<int>());
 
     ASSERT_EQ(9, resultList.count());
     ASSERT_EQ(9, resultVector.count());
@@ -166,7 +167,7 @@ TEST(AlgorithmsTest, flatFilterQVectorQSet)
 TEST(AlgorithmsTest, flatFilterQListQListShort)
 {
     QList<QList<int>> testContainer = {{0}, {1, 2, 3}, {4, 5}, {}, {6, 7, 8, 9}, {10, 11, 12, 13, 14}, {15, 16}};
-    QList<int> resultList = algorithms::flatFilter(testContainer, [](int x){return !(x % 2);});
+    QList<int> resultList = algorithms::flatFilter(testContainer, [](int x) { return !(x % 2); });
 
     ASSERT_EQ(9, resultList.count());
     for (int i = 0; i < 9; ++i)
@@ -176,7 +177,7 @@ TEST(AlgorithmsTest, flatFilterQListQListShort)
 TEST(AlgorithmsTest, flatFilterQVectorQListShort)
 {
     QVector<QList<int>> testContainer = {{0}, {1, 2, 3}, {4, 5}, {}, {6, 7, 8, 9}, {10, 11, 12, 13, 14}, {15, 16}};
-    QVector<int> resultVector = algorithms::flatFilter(testContainer, [](int x){return !(x % 2);});
+    QVector<int> resultVector = algorithms::flatFilter(testContainer, [](int x) { return !(x % 2); });
 
     ASSERT_EQ(9, resultVector.count());
     for (int i = 0; i < 9; ++i)
@@ -186,7 +187,7 @@ TEST(AlgorithmsTest, flatFilterQVectorQListShort)
 TEST(AlgorithmsTest, flatFilterQVectorQSetShort)
 {
     QVector<QSet<int>> testContainer = {{0}, {1, 2, 3}, {4, 5}, {}, {6, 7, 8, 9}, {10, 11, 12, 13, 14}, {15, 16}};
-    QVector<int> resultVector = algorithms::flatFilter(testContainer, [](int x){return !(x % 2);});
+    QVector<int> resultVector = algorithms::flatFilter(testContainer, [](int x) { return !(x % 2); });
 
     ASSERT_EQ(9, resultVector.count());
     std::sort(resultVector.begin(), resultVector.end());
