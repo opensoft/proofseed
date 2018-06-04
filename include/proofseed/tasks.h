@@ -137,6 +137,13 @@ auto run(Task &&task, RestrictionType restrictionType = RestrictionType::Custom,
     return TasksDispatcher::instance()->run(std::forward<Task>(task), restrictionType, restrictor);
 }
 
+template <typename Task>
+auto run(RestrictionType restrictionType, const QString &restrictor, Task &&task)
+    -> decltype(TasksDispatcher::instance()->run(task, restrictionType, restrictor))
+{
+    return TasksDispatcher::instance()->run(std::forward<Task>(task), restrictionType, restrictor);
+}
+
 template <template <typename...> class Container, typename Input, typename Task,
           typename Output = typename std::result_of_t<Task(Input)>,
           typename = typename std::enable_if_t<!std::is_same<Output, void>::value
