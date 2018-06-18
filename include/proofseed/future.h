@@ -1,14 +1,12 @@
 #ifndef PROOF_FUTURE_H
 #define PROOF_FUTURE_H
 
+#include "proofcore/3rdparty/optional.hpp"
 #include "proofcore/helpers/tuplemaker.h"
 #include "proofcore/helpers/zipper.h"
 #include "proofcore/proofalgorithms.h"
 #include "proofcore/proofcore_global.h"
 #include "proofcore/spinlock.h"
-
-//TODO: 1.0: think about switching to martinmoene or TartanLlama implementations
-#include "proofcore/3rdparty/optional.hpp"
 
 #include <QCoreApplication>
 #include <QMutex>
@@ -111,11 +109,8 @@ public:
     FutureSP<T> future() const { return m_future; }
 
     bool filled() { return m_future->completed(); }
-
     void failure(const Failure &reason) { m_future->fillFailure(reason); }
-
     void failure(Failure &&reason) { m_future->fillFailure(reason); }
-
     void success(const T &result) { m_future->fillSuccess(result); }
 
 private:
@@ -130,9 +125,9 @@ template <typename T>
 class CancelableFuture
 {
 public:
-    using Type = T;
-    using element_type = T;
-    using value_type = T;
+    using Type = Future<T>;
+    using element_type = Future<T>;
+    using value_type = Future<T>;
     explicit CancelableFuture() { m_promise = PromiseSP<T>::create(); }
     explicit CancelableFuture(const PromiseSP<T> &promise) { m_promise = promise; }
     void cancel(const Failure &failure = Failure("Canceled", 0, 0)) const
@@ -366,10 +361,8 @@ public:
         return result;
     }
 
-    //TODO: think about better approach for zip. TupleMaker seems a bit sloppy
     template <typename Head, typename... Other,
-              typename ResultSP = typename detail::ZipperSP<std::true_type, FutureSP<T>, Head, Other...>::type,
-              typename Result = typename std::decay<decltype(*ResultSP().data())>::type::Value>
+              typename Result = typename detail::ZipperSP<std::true_type, FutureSP<T>, Head, Other...>::type::Type::Value>
     FutureSP<Result> zip(Head head, Other... other)
     {
         return flatMap([head, other...](const T &v) -> FutureSP<Result> {
@@ -444,7 +437,6 @@ private:
 
         m_mainLock.lock();
         if (completed()) {
-            qCDebug(proofCoreFuturesLog) << "Trying to fill same future twice. Nothing happens";
             m_mainLock.unlock();
             return;
         }
@@ -463,7 +455,6 @@ private:
     {
         m_mainLock.lock();
         if (completed()) {
-            qCDebug(proofCoreFuturesLog) << "Trying to fill same future twice. Nothing happens";
             m_mainLock.unlock();
             return;
         }
