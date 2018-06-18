@@ -34,7 +34,8 @@ struct Failure
     {
         NoHint = 0x0,
         UserFriendlyHint = 0x1,
-        CriticalHint = 0x2
+        CriticalHint = 0x2,
+        DataIsHttpCodeHint = 0x4
     };
     Failure(const QString &message, long moduleCode, long errorCode, long hints = Failure::NoHint,
             const QVariant &data = QVariant())
