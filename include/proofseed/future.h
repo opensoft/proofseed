@@ -1,7 +1,7 @@
 #ifndef PROOF_FUTURE_H
 #define PROOF_FUTURE_H
 
-#include "proofcore/3rdparty/optional.hpp"
+#include "proofcore/3rdparty/optional/optional.hpp"
 #include "proofcore/helpers/tuplemaker.h"
 #include "proofcore/helpers/zipper.h"
 #include "proofcore/proofalgorithms.h"

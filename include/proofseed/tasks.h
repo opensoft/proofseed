@@ -1,7 +1,7 @@
 #ifndef PROOF_TASKS_H
 #define PROOF_TASKS_H
 
-#include "proofcore/3rdparty/optional.hpp"
+#include "proofcore/3rdparty/optional/optional.hpp"
 #include "proofcore/future.h"
 #include "proofcore/helpers/zipper.h"
 #include "proofcore/proofalgorithms.h"
