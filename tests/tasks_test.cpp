@@ -691,12 +691,14 @@ TEST(TasksTest, sequenceRunWithFailure)
 {
     std::atomic_bool ready{false};
     QVector<int> input;
-    int n = 5;
+    const int n = 5;
     for (int i = 0; i < n; ++i)
         input << i;
-    FutureSP<QVector<int>> future = run(input, [&ready](int x) -> int {
+    std::atomic_int doneCount{0};
+    FutureSP<QVector<int>> future = run(input, [&ready, &doneCount](int x) -> int {
         while (!ready)
             ;
+        ++doneCount;
         if (x == 3)
             return WithFailure("failed", 0, 0);
         return x * 2;
@@ -707,6 +709,11 @@ TEST(TasksTest, sequenceRunWithFailure)
     ASSERT_TRUE(future->failed());
     EXPECT_EQ("failed", future->failureReason().message);
     EXPECT_EQ(0, future->result().count());
+    QTime timeout;
+    timeout.start();
+    while (doneCount < n && timeout.elapsed() < 1000)
+        ;
+    EXPECT_EQ(n, doneCount);
 }
 
 TEST(TasksTest, clusteredRunWithFailure)
