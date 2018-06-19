@@ -222,7 +222,7 @@ auto forAll(const Container &container, const Predicate &predicate)
 }
 
 template <typename Container, typename Predicate,
-          typename = typename std::enable_if_t<!Proof::detail::HasTypeParams<Container>::value>>
+          typename = typename std::enable_if_t<!Proof::HasTypeParams<Container>::value>>
 auto forEach(const Container &container, const Predicate &predicate)
     -> decltype(predicate(*(detail::beginIterator(container))), void())
 {
@@ -233,7 +233,7 @@ auto forEach(const Container &container, const Predicate &predicate)
 }
 
 template <typename Container, typename Predicate,
-          typename = typename std::enable_if_t<!Proof::detail::HasTypeParams<Container>::value>>
+          typename = typename std::enable_if_t<!Proof::HasTypeParams<Container>::value>>
 auto forEach(const Container &container, const Predicate &predicate)
     -> decltype(predicate(0ll, *(detail::beginIterator(container))), void())
 {
@@ -311,7 +311,7 @@ auto filter(const Container &container, const Predicate &predicate)
 
 //Non-socketed type without indices
 template <typename Container, typename Predicate, typename Result,
-          typename = typename std::enable_if_t<!Proof::detail::HasTypeParams<Container>::value>>
+          typename = typename std::enable_if_t<!Proof::HasTypeParams<Container>::value>>
 auto map(const Container &container, const Predicate &predicate, Result destination)
     -> decltype(detail::addToContainer(destination, predicate(*(detail::beginIterator(container)))), Result())
 {
@@ -325,7 +325,7 @@ auto map(const Container &container, const Predicate &predicate, Result destinat
 
 //Non-socketed type with indices
 template <typename Container, typename Predicate, typename Result,
-          typename = typename std::enable_if_t<!Proof::detail::HasTypeParams<Container>::value>>
+          typename = typename std::enable_if_t<!Proof::HasTypeParams<Container>::value>>
 auto map(const Container &container, const Predicate &predicate, Result destination)
     -> decltype(detail::addToContainer(destination, predicate(0ll, *(detail::beginIterator(container)))), Result())
 {

@@ -42,7 +42,7 @@ public:
 
     template <typename Task, typename Result = typename std::result_of_t<Task()>,
               typename = typename std::enable_if_t<!std::is_same<Result, void>::value
-                                                   && !detail::IsSpecialization<2, Result, QSharedPointer, Future>::value>>
+                                                   && !IsSpecialization<Result, QSharedPointer, Future>::value>>
     CancelableFuture<Result> run(Task &&task, RestrictionType restrictionType, const QString &restrictor)
     {
         PromiseSP<Result> promise = PromiseSP<Result>::create();
@@ -58,7 +58,7 @@ public:
 
     template <typename Task, typename Result = typename std::result_of_t<Task()>,
               typename InnerResult = typename Result::Type::Value,
-              typename = typename std::enable_if_t<detail::IsSpecialization<2, Result, QSharedPointer, Future>::value>>
+              typename = typename std::enable_if_t<IsSpecialization<Result, QSharedPointer, Future>::value>>
     CancelableFuture<InnerResult> run(Task &&task, RestrictionType restrictionType, const QString &restrictor)
     {
         PromiseSP<InnerResult> promise = PromiseSP<InnerResult>::create();
@@ -147,7 +147,7 @@ auto run(RestrictionType restrictionType, const QString &restrictor, Task &&task
 template <template <typename...> class Container, typename Input, typename Task,
           typename Output = typename std::result_of_t<Task(Input)>,
           typename = typename std::enable_if_t<!std::is_same<Output, void>::value
-                                               && !detail::IsSpecialization<2, Output, QSharedPointer, Future>::value>>
+                                               && !IsSpecialization<Output, QSharedPointer, Future>::value>>
 auto run(const Container<Input> &data, Task &&task, RestrictionType restrictionType = RestrictionType::Custom,
          const QString &restrictor = QString()) -> decltype(task(*(data.cbegin())), FutureSP<Container<Output>>())
 {
@@ -163,7 +163,7 @@ auto run(const Container<Input> &data, Task &&task, RestrictionType restrictionT
 
 template <template <typename...> class Container, typename Input, typename Task,
           typename Output = typename std::result_of_t<Task(Input)>,
-          typename = typename std::enable_if_t<detail::IsSpecialization<2, Output, QSharedPointer, Future>::value>,
+          typename = typename std::enable_if_t<IsSpecialization<Output, QSharedPointer, Future>::value>,
           typename OutputValue = typename Output::Type::Value>
 auto run(const Container<Input> &data, Task &&task, RestrictionType restrictionType = RestrictionType::Custom,
          const QString &restrictor = QString()) -> decltype(task(*(data.cbegin())), FutureSP<Container<OutputValue>>())
@@ -196,7 +196,7 @@ auto run(const Container<Input> &data, Task &&task, RestrictionType restrictionT
 template <template <typename...> class Container, typename Input, typename Task,
           typename Output = typename std::result_of_t<Task(long long, Input)>,
           typename = typename std::enable_if_t<!std::is_same<Output, void>::value
-                                               && !detail::IsSpecialization<2, Output, QSharedPointer, Future>::value>>
+                                               && !IsSpecialization<Output, QSharedPointer, Future>::value>>
 auto run(const Container<Input> &data, Task &&task, RestrictionType restrictionType = RestrictionType::Custom,
          const QString &restrictor = QString()) -> decltype(task(0ll, *(data.cbegin())), FutureSP<Container<Output>>())
 {
@@ -213,7 +213,7 @@ auto run(const Container<Input> &data, Task &&task, RestrictionType restrictionT
 
 template <template <typename...> class Container, typename Input, typename Task,
           typename Output = typename std::result_of_t<Task(long long, Input)>,
-          typename = typename std::enable_if_t<detail::IsSpecialization<2, Output, QSharedPointer, Future>::value>,
+          typename = typename std::enable_if_t<IsSpecialization<Output, QSharedPointer, Future>::value>,
           typename OutputValue = typename Output::Type::Value>
 auto run(const Container<Input> &data, Task &&task, RestrictionType restrictionType = RestrictionType::Custom,
          const QString &restrictor = QString())

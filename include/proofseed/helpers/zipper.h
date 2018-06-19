@@ -16,7 +16,7 @@ template <typename...>
 struct ZipperSP;
 
 template <template <typename...> class Wrapper, typename Left, typename Right>
-struct ZipperSP<std::enable_if_t<!IsSpecialization<1, Left, std::tuple>::value && !IsSpecialization<1, Right, std::tuple>::value,
+struct ZipperSP<std::enable_if_t<!IsSpecialization<Left, std::tuple>::value && !IsSpecialization<Right, std::tuple>::value,
                                  std::true_type>,
                 QSharedPointer<Wrapper<Left>>, QSharedPointer<Wrapper<Right>>>
 {
@@ -24,14 +24,14 @@ struct ZipperSP<std::enable_if_t<!IsSpecialization<1, Left, std::tuple>::value &
 };
 
 template <template <typename...> class Wrapper, typename... Left, typename Right>
-struct ZipperSP<std::enable_if_t<!IsSpecialization<1, Right, std::tuple>::value, std::true_type>,
+struct ZipperSP<std::enable_if_t<!IsSpecialization<Right, std::tuple>::value, std::true_type>,
                 QSharedPointer<Wrapper<std::tuple<Left...>>>, QSharedPointer<Wrapper<Right>>>
 {
     using type = QSharedPointer<Wrapper<std::tuple<Left..., Right>>>;
 };
 
 template <template <typename...> class Wrapper, typename Left, typename... Right>
-struct ZipperSP<std::enable_if_t<!IsSpecialization<1, Left, std::tuple>::value, std::true_type>,
+struct ZipperSP<std::enable_if_t<!IsSpecialization<Left, std::tuple>::value, std::true_type>,
                 QSharedPointer<Wrapper<Left>>, QSharedPointer<Wrapper<std::tuple<Right...>>>>
 {
     using type = QSharedPointer<Wrapper<std::tuple<Left, Right...>>>;
