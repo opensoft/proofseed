@@ -3,7 +3,6 @@
 
 #include "proofcore/3rdparty/optional/optional.hpp"
 #include "proofcore/helpers/tuplemaker.h"
-#include "proofcore/helpers/zipper.h"
 #include "proofcore/proofalgorithms.h"
 #include "proofcore/proofcore_global.h"
 #include "proofcore/spinlock.h"
@@ -54,6 +53,28 @@ struct Failure
 
 namespace futures {
 namespace detail {
+template <typename...>
+struct Zipper;
+
+template <typename Left, typename Right>
+struct Zipper<std::enable_if_t<IsSpecialization<Left, std::tuple>::value, std::true_type>, Left, Right>
+{
+    using type = decltype(std::tuple_cat(Left(), typename Proof::detail::TupleMaker<typename Right::Type::Value>::type()));
+};
+
+template <typename Left, typename Right>
+struct Zipper<std::enable_if_t<!IsSpecialization<Left, std::tuple>::value, std::true_type>, Left, Right>
+{
+    using type = decltype(std::tuple_cat(typename Proof::detail::TupleMaker<typename Left::Type::Value>::type(),
+                                         typename Proof::detail::TupleMaker<typename Right::Type::Value>::type()));
+};
+
+template <typename Left, typename Middle, typename Right, typename... Tail>
+struct Zipper<std::true_type, Left, Middle, Right, Tail...>
+{
+    using type = typename Zipper<std::true_type, typename Zipper<std::true_type, Left, Middle>::type, Right, Tail...>::type;
+};
+
 bool PROOF_CORE_EXPORT hasLastFailure();
 Failure PROOF_CORE_EXPORT lastFailure();
 void PROOF_CORE_EXPORT resetLastFailure();
@@ -362,7 +383,7 @@ public:
     }
 
     template <typename Head, typename... Other,
-              typename Result = typename detail::ZipperSP<std::true_type, FutureSP<T>, Head, Other...>::type::Type::Value>
+              typename Result = typename futures::detail::Zipper<std::true_type, FutureSP<T>, Head, Other...>::type>
     FutureSP<Result> zip(Head head, Other... other)
     {
         return flatMap([head, other...](const T &v) -> FutureSP<Result> {

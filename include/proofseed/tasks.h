@@ -3,7 +3,6 @@
 
 #include "proofcore/3rdparty/optional/optional.hpp"
 #include "proofcore/future.h"
-#include "proofcore/helpers/zipper.h"
 #include "proofcore/proofalgorithms.h"
 #include "proofcore/proofcore_global.h"
 
