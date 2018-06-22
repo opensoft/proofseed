@@ -186,6 +186,72 @@ TEST(AlgorithmsTest, mapQList)
         EXPECT_EQ(i * (i + 1), static_cast<unsigned long>(resultVector[i]));
 }
 
+TEST(AlgorithmsTest, mapQVector)
+{
+    QVector<int> emptyContainer;
+    QVector<int> testContainer = {1, 2, 3, 4, 5, 6, 7, 8, 9};
+    QList<int> resultQList;
+    std::vector<int> resultVector;
+    QMap<int, bool> resultQMap;
+
+    auto listPredicate = [](int x) -> int { return x * 2; };
+    auto indicedPredicate = [](long long index, int x) -> int { return x * static_cast<int>(index); };
+    auto mapPredicate = [](int x) -> QPair<int, bool> { return qMakePair(x * 2, !(x % 3)); };
+
+    resultQList = algorithms::map(emptyContainer, listPredicate, QList<int>());
+    EXPECT_EQ(0, resultQList.size());
+    resultVector = algorithms::map(emptyContainer, listPredicate, std::vector<int>());
+    EXPECT_EQ(0u, resultVector.size());
+    resultQList = algorithms::map(emptyContainer, listPredicate, QSet<int>()).toList();
+    EXPECT_EQ(0, resultQList.size());
+    resultVector = setToVector(algorithms::map(emptyContainer, listPredicate, std::set<int>()));
+    EXPECT_EQ(0u, resultVector.size());
+    resultQMap = algorithms::map(emptyContainer, mapPredicate, QMap<int, bool>());
+    EXPECT_EQ(0, resultQMap.size());
+
+    resultQList = algorithms::map(testContainer, listPredicate, QList<int>());
+    ASSERT_EQ(9, resultQList.size());
+    for (int i = 1; i <= 9; ++i)
+        EXPECT_EQ(i * 2, resultQList[i - 1]);
+    resultVector = algorithms::map(testContainer, listPredicate, std::vector<int>());
+    ASSERT_EQ(9u, resultVector.size());
+    for (size_t i = 1; i <= 9; ++i)
+        EXPECT_EQ(i * 2, static_cast<unsigned long>(resultVector[i - 1]));
+    resultQList = algorithms::map(testContainer, listPredicate, QSet<int>()).toList();
+    ASSERT_EQ(9, resultQList.size());
+    std::sort(resultQList.begin(), resultQList.end());
+    for (int i = 1; i <= 9; ++i)
+        EXPECT_EQ(i * 2, resultQList[i - 1]);
+    resultVector = setToVector(algorithms::map(testContainer, listPredicate, std::set<int>()));
+    ASSERT_EQ(9u, resultVector.size());
+    for (size_t i = 1; i <= 9; ++i)
+        EXPECT_EQ(i * 2, static_cast<unsigned long>(resultVector[i - 1]));
+    resultQMap = algorithms::map(testContainer, mapPredicate, QMap<int, bool>());
+    ASSERT_EQ(9, resultQMap.size());
+    for (int i = 1; i <= 9; ++i) {
+        EXPECT_TRUE(resultQMap.contains(i * 2));
+        EXPECT_EQ(!(i % 3), resultQMap[i * 2]);
+    }
+
+    resultQList = algorithms::map(testContainer, indicedPredicate, QList<int>());
+    ASSERT_EQ(9, resultQList.size());
+    for (int i = 0; i < 9; ++i)
+        EXPECT_EQ(i * (i + 1), resultQList[i]);
+    resultVector = algorithms::map(testContainer, indicedPredicate, std::vector<int>());
+    ASSERT_EQ(9u, resultVector.size());
+    for (size_t i = 0; i < 9; ++i)
+        EXPECT_EQ(i * (i + 1), static_cast<unsigned long>(resultVector[i]));
+    resultQList = algorithms::map(testContainer, indicedPredicate, QSet<int>()).toList();
+    ASSERT_EQ(9, resultQList.size());
+    std::sort(resultQList.begin(), resultQList.end());
+    for (int i = 0; i < 9; ++i)
+        EXPECT_EQ(i * (i + 1), resultQList[i]);
+    resultVector = setToVector(algorithms::map(testContainer, indicedPredicate, std::set<int>()));
+    ASSERT_EQ(9u, resultVector.size());
+    for (size_t i = 0; i < 9; ++i)
+        EXPECT_EQ(i * (i + 1), static_cast<unsigned long>(resultVector[i]));
+}
+
 TEST(AlgorithmsTest, mapQSet)
 {
     QSet<int> emptyContainer;
@@ -460,6 +526,26 @@ TEST(AlgorithmsTest, mapQListShort)
         EXPECT_EQ(i * testContainer[i], resultQList3[i]);
 }
 
+TEST(AlgorithmsTest, mapQVectorShort)
+{
+    QVector<int> testContainer = {1, 2, 3, 4, 5, 6, 7, 8, 9};
+
+    QVector<int> resultQVector = algorithms::map(testContainer, [](int x) { return x * 2; });
+    ASSERT_EQ(9, resultQVector.size());
+    for (int i = 1; i <= 9; ++i)
+        EXPECT_EQ(i * 2, resultQVector[i - 1]);
+
+    QVector<double> resultQVector2 = algorithms::map(testContainer, [](int x) { return x * 2.0; });
+    ASSERT_EQ(9, resultQVector2.size());
+    for (int i = 1; i <= 9; ++i)
+        EXPECT_DOUBLE_EQ(i * 2, resultQVector2[i - 1]);
+
+    QVector<long long> resultQVector3 = algorithms::map(testContainer, [](long long index, int x) { return x * index; });
+    ASSERT_EQ(9, resultQVector3.size());
+    for (int i = 0; i < 9; ++i)
+        EXPECT_EQ(i * testContainer[i], resultQVector3[i]);
+}
+
 TEST(AlgorithmsTest, mapQSetShort)
 {
     QSet<int> testContainer = {1, 2, 3, 4, 5, 6, 7, 8, 9};
@@ -493,11 +579,33 @@ TEST(AlgorithmsTest, mapQMapShort)
 
     QMap<QString, int> resultQMap2 = algorithms::map(testContainer,
                                                      [](int x, bool) { return qMakePair(QString::number(x), x % 3); });
-    ASSERT_EQ(9, resultQMap.size());
+    ASSERT_EQ(9, resultQMap2.size());
     for (int i = 1; i <= 9; ++i) {
         QString key = QString::number(i);
         EXPECT_TRUE(resultQMap2.contains(key));
         EXPECT_EQ(i % 3, resultQMap2[key]);
+    }
+}
+
+TEST(AlgorithmsTest, mapQHashShort)
+{
+    QHash<int, bool> testContainer = {{1, true},  {2, false}, {3, true},  {4, false}, {5, true},
+                                      {6, false}, {7, true},  {8, false}, {9, true}};
+
+    QHash<int, bool> resultQHash = algorithms::map(testContainer, [](int x, bool) { return qMakePair(x * 2, !(x % 3)); });
+    ASSERT_EQ(9, resultQHash.size());
+    for (int i = 1; i <= 9; ++i) {
+        EXPECT_TRUE(resultQHash.contains(i * 2));
+        EXPECT_EQ(!(i % 3), resultQHash[i * 2]);
+    }
+
+    QHash<QString, int> resultQHash2 = algorithms::map(testContainer,
+                                                       [](int x, bool) { return qMakePair(QString::number(x), x % 3); });
+    ASSERT_EQ(9, resultQHash2.size());
+    for (int i = 1; i <= 9; ++i) {
+        QString key = QString::number(i);
+        EXPECT_TRUE(resultQHash2.contains(key));
+        EXPECT_EQ(i % 3, resultQHash2[key]);
     }
 }
 
@@ -537,4 +645,82 @@ TEST(AlgorithmsTest, mapSetShort)
     ASSERT_EQ(9u, resultVector2.size());
     for (size_t i = 1; i <= 9; ++i)
         EXPECT_EQ(i * 2, static_cast<unsigned long>(resultVector2[i - 1]));
+}
+
+TEST(AlgorithmsTest, mapQListInPlace)
+{
+    QList<int> testContainer = {1, 2, 3, 4, 5, 6, 7, 8, 9};
+
+    algorithms::mapInPlace(testContainer, [](int x) { return x * 2; });
+    ASSERT_EQ(9, testContainer.size());
+    for (int i = 1; i <= 9; ++i)
+        EXPECT_EQ(i * 2, testContainer[i - 1]);
+
+    algorithms::mapInPlace(testContainer, [](long long i, int x) { return x + i + 1; });
+    ASSERT_EQ(9, testContainer.size());
+    for (int i = 1; i <= 9; ++i)
+        EXPECT_EQ(i * 2 + i, testContainer[i - 1]);
+}
+
+TEST(AlgorithmsTest, mapQVectorInPlace)
+{
+    QVector<int> testContainer = {1, 2, 3, 4, 5, 6, 7, 8, 9};
+
+    algorithms::mapInPlace(testContainer, [](int x) { return x * 2; });
+    ASSERT_EQ(9, testContainer.size());
+    for (int i = 1; i <= 9; ++i)
+        EXPECT_EQ(i * 2, testContainer[i - 1]);
+
+    algorithms::mapInPlace(testContainer, [](long long i, int x) { return x + i + 1; });
+    ASSERT_EQ(9, testContainer.size());
+    for (int i = 1; i <= 9; ++i)
+        EXPECT_EQ(i * 2 + i, testContainer[i - 1]);
+}
+
+TEST(AlgorithmsTest, mapQMapInPlace)
+{
+    QMap<int, bool> testContainer = {{1, true},  {2, false}, {3, true},  {4, false}, {5, true},
+                                     {6, false}, {7, true},  {8, false}, {9, true}};
+
+    algorithms::mapInPlace(testContainer, [](int x, bool) -> bool { return !(x % 3); });
+    ASSERT_EQ(9, testContainer.size());
+    for (int i = 1; i <= 9; ++i)
+        EXPECT_EQ(!(i % 3), testContainer[i]);
+}
+
+TEST(AlgorithmsTest, mapQHashInPlace)
+{
+    QHash<int, bool> testContainer = {{1, true},  {2, false}, {3, true},  {4, false}, {5, true},
+                                      {6, false}, {7, true},  {8, false}, {9, true}};
+
+    algorithms::mapInPlace(testContainer, [](int x, bool) -> bool { return !(x % 3); });
+    ASSERT_EQ(9, testContainer.size());
+    for (int i = 1; i <= 9; ++i)
+        EXPECT_EQ(!(i % 3), testContainer[i]);
+}
+
+TEST(AlgorithmsTest, mapVectorInPlace)
+{
+    std::vector<int> testContainer = {1, 2, 3, 4, 5, 6, 7, 8, 9};
+
+    algorithms::mapInPlace(testContainer, [](int x) { return x * 2; });
+    ASSERT_EQ(9, testContainer.size());
+    for (unsigned int i = 1; i <= 9; ++i)
+        EXPECT_EQ(i * 2, testContainer[i - 1]);
+
+    algorithms::mapInPlace(testContainer, [](long long i, int x) { return x + i + 1; });
+    ASSERT_EQ(9, testContainer.size());
+    for (unsigned int i = 1; i <= 9; ++i)
+        EXPECT_EQ(i * 2 + i, testContainer[i - 1]);
+}
+
+TEST(AlgorithmsTest, mapMapInPlace)
+{
+    std::map<int, bool> testContainer = {{1, true},  {2, false}, {3, true},  {4, false}, {5, true},
+                                         {6, false}, {7, true},  {8, false}, {9, true}};
+
+    algorithms::mapInPlace(testContainer, [](int x, bool) -> bool { return !(x % 3); });
+    ASSERT_EQ(9, testContainer.size());
+    for (int i = 1; i <= 9; ++i)
+        EXPECT_EQ(!(i % 3), testContainer[i]);
 }

@@ -142,6 +142,74 @@ void makeUnique(Container &container)
     container.erase(std::unique(container.begin(), container.end()), container.end());
 }
 
+//Non-socketed type without indices
+template <typename Container, typename Predicate, typename = typename std::enable_if_t<!Proof::HasTypeParams<Container>::value>>
+auto mapInPlace(Container &container, const Predicate &predicate)
+    -> decltype(*container.begin() = predicate(*container.begin()), void())
+{
+    auto it = container.begin();
+    auto end = container.end();
+    for (; it != end; ++it)
+        *it = predicate(*it);
+}
+
+//Non-socketed type with indices
+template <typename Container, typename Predicate, typename = typename std::enable_if_t<!Proof::HasTypeParams<Container>::value>>
+auto mapInPlace(Container &container, const Predicate &predicate)
+    -> decltype(*container.begin() = predicate(0ll, *container.begin()), void())
+{
+    auto it = container.begin();
+    auto end = container.end();
+    long long counter = -1;
+    for (; it != end; ++it)
+        *it = predicate(++counter, *it);
+}
+
+//Single socketed type without indices
+template <template <typename...> class Container, typename Input, typename Predicate>
+auto mapInPlace(Container<Input> &container, const Predicate &predicate)
+    -> decltype(*container.begin() = predicate(*container.begin()), void())
+{
+    auto it = container.begin();
+    auto end = container.end();
+    for (; it != end; ++it)
+        *it = predicate(*it);
+}
+
+//Single socketed type with indices
+template <template <typename...> class Container, typename Input, typename Predicate>
+auto mapInPlace(Container<Input> &container, const Predicate &predicate)
+    -> decltype(*container.begin() = predicate(0ll, *container.begin()), void())
+{
+    auto it = container.begin();
+    auto end = container.end();
+    long long counter = -1;
+    for (; it != end; ++it)
+        *it = predicate(++counter, *it);
+}
+
+//Double socketed Qt type
+template <template <typename...> class Container, typename InputKey, typename InputValue, typename Predicate>
+auto mapInPlace(Container<InputKey, InputValue> &container, const Predicate &predicate)
+    -> decltype(*container.begin() = predicate(container.begin().key(), container.begin().value()), void())
+{
+    auto it = container.begin();
+    auto end = container.end();
+    for (; it != end; ++it)
+        *it = predicate(it.key(), it.value());
+}
+
+//Double socketed stl type
+template <template <typename...> class Container, typename InputKey, typename InputValue, typename Predicate>
+auto mapInPlace(Container<InputKey, InputValue> &container, const Predicate &predicate)
+    -> decltype(container.begin()->second = predicate(container.begin()->first, container.begin()->second), void())
+{
+    auto it = container.begin();
+    auto end = container.end();
+    for (; it != end; ++it)
+        it->second = predicate(it->first, it->second);
+}
+
 template <typename Container, typename Predicate, typename Result = typename Container::value_type>
 auto findIf(const Container &container, const Predicate &predicate, const Result &defaultValue = Result())
     -> decltype(predicate(*(detail::beginIterator(container))), Result())
@@ -221,8 +289,7 @@ auto forAll(const Container &container, const Predicate &predicate)
     return true;
 }
 
-template <typename Container, typename Predicate,
-          typename = typename std::enable_if_t<!Proof::HasTypeParams<Container>::value>>
+template <typename Container, typename Predicate, typename = typename std::enable_if_t<!Proof::HasTypeParams<Container>::value>>
 auto forEach(const Container &container, const Predicate &predicate)
     -> decltype(predicate(*(detail::beginIterator(container))), void())
 {
@@ -232,8 +299,7 @@ auto forEach(const Container &container, const Predicate &predicate)
         predicate(*it);
 }
 
-template <typename Container, typename Predicate,
-          typename = typename std::enable_if_t<!Proof::HasTypeParams<Container>::value>>
+template <typename Container, typename Predicate, typename = typename std::enable_if_t<!Proof::HasTypeParams<Container>::value>>
 auto forEach(const Container &container, const Predicate &predicate)
     -> decltype(predicate(0ll, *(detail::beginIterator(container))), void())
 {
