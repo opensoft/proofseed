@@ -499,6 +499,75 @@ Container<OutputKey, OutputValue> map(const Container<InputKey, InputValue> &con
     return map(container, func, Container<OutputKey, OutputValue>());
 }
 
+inline auto identity()
+{
+    return [](const auto &x) { return x; };
+}
+
+inline auto keyIdentity()
+{
+    return [](const auto &x, const auto &) { return x; };
+}
+
+inline auto valueIdentity()
+{
+    return [](const auto &, const auto &x) { return x; };
+}
+
+template <template <typename...> class Container, typename Input>
+QSet<Input> toSet(const Container<Input> &container)
+{
+    return map(container, identity(), QSet<Input>());
+}
+
+template <template <typename...> class Container, typename Input>
+QVector<Input> toVector(const Container<Input> &container)
+{
+    return map(container, identity(), QVector<Input>());
+}
+
+template <template <typename...> class Container, typename Input>
+QList<Input> toList(const Container<Input> &container)
+{
+    return map(container, identity(), QList<Input>());
+}
+
+template <template <typename...> class Container, typename InputKey, typename InputValue>
+QSet<InputKey> toKeysSet(const Container<InputKey, InputValue> &container)
+{
+    return map(container, keyIdentity(), QSet<InputKey>());
+}
+
+template <template <typename...> class Container, typename InputKey, typename InputValue>
+QVector<InputKey> toKeysVector(const Container<InputKey, InputValue> &container)
+{
+    return map(container, keyIdentity(), QVector<InputKey>());
+}
+
+template <template <typename...> class Container, typename InputKey, typename InputValue>
+QList<InputKey> toKeysList(const Container<InputKey, InputValue> &container)
+{
+    return map(container, keyIdentity(), QList<InputKey>());
+}
+
+template <template <typename...> class Container, typename InputKey, typename InputValue>
+QSet<InputValue> toValuesSet(const Container<InputKey, InputValue> &container)
+{
+    return map(container, valueIdentity(), QSet<InputValue>());
+}
+
+template <template <typename...> class Container, typename InputKey, typename InputValue>
+QVector<InputValue> toValuesVector(const Container<InputKey, InputValue> &container)
+{
+    return map(container, valueIdentity(), QVector<InputValue>());
+}
+
+template <template <typename...> class Container, typename InputKey, typename InputValue>
+QList<InputValue> toValuesList(const Container<InputKey, InputValue> &container)
+{
+    return map(container, valueIdentity(), QList<InputValue>());
+}
+
 template <typename Container, typename Func, typename Result>
 auto reduce(const Container &container, const Func &func, Result acc)
     -> decltype(acc = func(acc, *detail::beginIterator(container)), Result())
