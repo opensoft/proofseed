@@ -131,7 +131,7 @@ TEST(FutureTest, withFailure)
     EXPECT_FALSE(future->succeeded());
     EXPECT_TRUE(future->failed());
     EXPECT_TRUE(future->failureReason().exists);
-    EXPECT_EQ(QLatin1String(), future->failureReason().message);
+    EXPECT_EQ(QString(), future->failureReason().message);
     EXPECT_EQ(0, future->failureReason().moduleCode);
     EXPECT_EQ(0, future->failureReason().errorCode);
     EXPECT_EQ("failed4", future->failureReason().data);
@@ -467,12 +467,12 @@ TEST(FutureTest, filterNegativeCustomRejectedL)
 
 TEST(FutureTest, reduce)
 {
-    PromiseSP<QList<int>> promise = PromiseSP<QList<int>>::create();
-    FutureSP<QList<int>> future = promise->future();
+    PromiseSP<QVector<int>> promise = PromiseSP<QVector<int>>::create();
+    FutureSP<QVector<int>> future = promise->future();
     FutureSP<int> reducedFuture = future->reduce([](int acc, int x) { return acc + x; }, 0);
     EXPECT_FALSE(reducedFuture->completed());
     promise->success({1, 2, 3, 4, 5});
-    QList<int> result = future->result();
+    QVector<int> result = future->result();
     ASSERT_EQ(5, result.count());
     for (int i = 0; i < 5; ++i)
         EXPECT_EQ(i + 1, result[i]);
@@ -485,11 +485,11 @@ TEST(FutureTest, reduce)
 TEST(FutureTest, sequenceQList)
 {
     int n = 5;
-    QList<PromiseSP<int>> promises;
+    QVector<PromiseSP<int>> promises;
     for (int i = 0; i < n; ++i)
         promises << PromiseSP<int>::create();
-    QList<FutureSP<int>> futures = algorithms::map(promises, [](auto p) { return p->future(); });
-    FutureSP<QList<int>> sequencedFuture = Future<int>::sequence(futures);
+    QVector<FutureSP<int>> futures = algorithms::map(promises, [](auto p) { return p->future(); });
+    FutureSP<QVector<int>> sequencedFuture = Future<int>::sequence(futures);
     for (int i = 0; i < n; ++i)
         EXPECT_FALSE(futures[i]->completed());
 
@@ -500,7 +500,7 @@ TEST(FutureTest, sequenceQList)
     ASSERT_TRUE(sequencedFuture->completed());
     EXPECT_TRUE(sequencedFuture->succeeded());
     EXPECT_FALSE(sequencedFuture->failed());
-    QList<int> result = sequencedFuture->result();
+    QVector<int> result = sequencedFuture->result();
     ASSERT_EQ(5, result.count());
     for (int i = 0; i < 5; ++i)
         EXPECT_EQ(i * 2, result[i]);
@@ -509,11 +509,11 @@ TEST(FutureTest, sequenceQList)
 TEST(FutureTest, sequenceQListNegative)
 {
     int n = 5;
-    QList<PromiseSP<int>> promises;
+    QVector<PromiseSP<int>> promises;
     for (int i = 0; i < n; ++i)
         promises << PromiseSP<int>::create();
-    QList<FutureSP<int>> futures = algorithms::map(promises, [](auto p) { return p->future(); });
-    FutureSP<QList<int>> sequencedFuture = Future<int>::sequence(futures);
+    QVector<FutureSP<int>> futures = algorithms::map(promises, [](auto p) { return p->future(); });
+    FutureSP<QVector<int>> sequencedFuture = Future<int>::sequence(futures);
     for (int i = 0; i < n; ++i)
         EXPECT_FALSE(futures[i]->completed());
     EXPECT_FALSE(sequencedFuture->completed());
@@ -532,12 +532,12 @@ TEST(FutureTest, sequenceQListNegative)
 
 TEST(FutureTest, sequenceQListEmpty)
 {
-    QList<FutureSP<int>> futures;
-    FutureSP<QList<int>> sequencedFuture = Future<int>::sequence(futures);
+    QVector<FutureSP<int>> futures;
+    FutureSP<QVector<int>> sequencedFuture = Future<int>::sequence(futures);
     ASSERT_TRUE(sequencedFuture->completed());
     EXPECT_TRUE(sequencedFuture->succeeded());
     EXPECT_FALSE(sequencedFuture->failed());
-    QList<int> result = sequencedFuture->result();
+    QVector<int> result = sequencedFuture->result();
     EXPECT_EQ(0, result.count());
 }
 
@@ -686,7 +686,7 @@ TEST(FutureTest, failureFromReduce)
 {
     PromiseSP<int> promise = PromiseSP<int>::create();
     FutureSP<int> future = promise->future();
-    FutureSP<QList<int>> mappedFuture = future->map([](int x) { return QList<int>{x, x * 2}; });
+    FutureSP<QVector<int>> mappedFuture = future->map([](int x) { return QVector<int>{x, x * 2}; });
     FutureSP<int> mappedAgainFuture = mappedFuture->reduce([](int, int) -> int { return WithFailure("failed", 0, 0); },
                                                            0);
     FutureSP<int> mappedOnceMoreFuture = mappedAgainFuture->map([](int) -> int { return 24; });

@@ -38,15 +38,13 @@ struct Failure
             const QVariant &data = QVariant())
         : exists(true), moduleCode(moduleCode), errorCode(errorCode), hints(hints), message(message), data(data)
     {}
-    explicit Failure(const QVariant &data)
-        : exists(true), moduleCode(0), errorCode(0), hints(NoHint), message(QLatin1String()), data(data)
-    {}
+    explicit Failure(const QVariant &data) : exists(true), data(data) {}
     Failure() : exists(false), moduleCode(0), errorCode(0), hints(NoHint) {}
     operator QString() { return message; }
     bool exists = false;
     long moduleCode = 0;
     long errorCode = 0;
-    long hints = 0;
+    long hints = NoHint;
     QString message;
     QVariant data;
 };
@@ -151,7 +149,7 @@ public:
     using value_type = Future<T>;
     explicit CancelableFuture() { m_promise = PromiseSP<T>::create(); }
     explicit CancelableFuture(const PromiseSP<T> &promise) { m_promise = promise; }
-    void cancel(const Failure &failure = Failure("Canceled", 0, 0)) const
+    void cancel(const Failure &failure = Failure(QStringLiteral("Canceled"), 0, 0)) const
     {
         if (!m_promise->filled())
             m_promise->failure(failure);
@@ -415,17 +413,6 @@ public:
     }
 
     //This method was made non-template to restrict usage only to linear qt containers because of container copying
-    static FutureSP<QList<T>> sequence(QList<FutureSP<T>> container)
-    {
-        if (container.isEmpty())
-            return Future<QList<T>>::successful();
-        PromiseSP<QList<T>> promise = PromiseSP<QList<T>>::create();
-        QList<T> result;
-        result.reserve(container.count());
-        iterateSequence(std::move(container), container.cbegin(), std::move(result), promise);
-        return promise->future();
-    }
-
     static FutureSP<QVector<T>> sequence(QVector<FutureSP<T>> container)
     {
         if (container.isEmpty())

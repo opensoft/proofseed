@@ -166,7 +166,7 @@ void TasksDispatcher::insertTaskInfo(std::function<void()> &&wrappedTask, Restri
     d_ptr->mainLock.lock();
     //We mimic all intensive tasks as under single restrictor
     d_ptr->tasks.emplace_back(std::move(wrappedTask), restrictionType,
-                              restrictionType == RestrictionType::Intensive ? QLatin1String("_") : restrictor);
+                              restrictionType == RestrictionType::Intensive ? QStringLiteral("_") : restrictor);
     d_ptr->schedule();
     d_ptr->mainLock.unlock();
 }

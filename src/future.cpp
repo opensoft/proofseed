@@ -17,7 +17,7 @@ Failure lastFailure()
 
 void resetLastFailure()
 {
-    return m_lastFailure.reset();
+    m_lastFailure.reset();
 }
 
 void setLastFailure(Proof::Failure &&failure)

@@ -168,7 +168,7 @@ TEST(TasksTest, multipleTasks)
 {
     std::atomic_bool ready{false};
     int n = 5;
-    QList<FutureSP<Result<int>>> results;
+    QVector<FutureSP<Result<int>>> results;
     for (int i = 0; i < n; ++i) {
         results << run([&ready, i]() {
             while (!ready)
@@ -194,7 +194,7 @@ TEST(TasksTest, multipleTasksOverCapacity)
     std::atomic_bool ready{false};
     std::atomic_int runCounter{0};
     int n = TasksDispatcher::instance()->capacity() * 2;
-    QList<FutureSP<int>> results;
+    QVector<FutureSP<int>> results;
     for (int i = 0; i < n; ++i) {
         results << run([&ready, &runCounter, i]() {
             ++runCounter;
@@ -222,7 +222,7 @@ TEST(TasksTest, multipleIntensiveTasksOverCapacity)
     std::atomic_int runCounter{0};
     int capacity = TasksDispatcher::instance()->restrictorCapacity(RestrictionType::Intensive);
     int n = capacity * 2;
-    QList<FutureSP<int>> results;
+    QVector<FutureSP<int>> results;
     for (int i = 0; i < n; ++i) {
         results << run(
             [&ready, &runCounter, i]() {
@@ -255,8 +255,8 @@ TEST(TasksTest, multipleCustomTasksOverCapacity)
     TasksDispatcher::instance()->addCustomRestrictor("test", capacity);
     int fullCapacity = TasksDispatcher::instance()->restrictorCapacity(RestrictionType::Custom, "other");
     int n = fullCapacity * 2;
-    QList<FutureSP<int>> results;
-    QList<FutureSP<int>> otherResults;
+    QVector<FutureSP<int>> results;
+    QVector<FutureSP<int>> otherResults;
     for (int i = 0; i < n; ++i) {
         results << run(
             [&ready, &runCounter, i]() {
@@ -525,7 +525,7 @@ TEST(TasksTest, clusteredRun)
     std::atomic_bool ready{false};
     std::atomic_int runCounter{0};
     SpinLock initialDataLock;
-    QList<int> initialData;
+    QVector<int> initialData;
     QVector<int> input;
     int capacity = TasksDispatcher::instance()->restrictorCapacity(RestrictionType::Intensive);
     int n = capacity * 100;
@@ -579,7 +579,7 @@ TEST(TasksTest, clusteredRunWithExtraBigCluster)
     std::atomic_bool ready{false};
     std::atomic_int runCounter{0};
     SpinLock initialDataLock;
-    QList<int> initialData;
+    QVector<int> initialData;
     QVector<int> input;
 
     int capacity = 4;
@@ -656,7 +656,7 @@ TEST(TasksTest, multipleTasksWithFailure)
 {
     std::atomic_bool ready{false};
     int n = 5;
-    QList<FutureSP<Result<int>>> results;
+    QVector<FutureSP<Result<int>>> results;
     for (int i = 0; i < n; ++i) {
         results << run([&ready, i]() -> Result<int> {
             while (!ready)
@@ -795,8 +795,8 @@ TEST(TasksTest, threadBindingToDifferentKeys)
 {
     auto task = []() { return pairedResult(1); };
 
-    QList<FutureSP<Result<int>>> firstResults;
-    QList<FutureSP<Result<int>>> secondResults;
+    QVector<FutureSP<Result<int>>> firstResults;
+    QVector<FutureSP<Result<int>>> secondResults;
     int n = TasksDispatcher::instance()->capacity() * 2;
     for (int i = 0; i < n; ++i) {
         firstResults << run(task, RestrictionType::ThreadBound, "my1");
@@ -826,8 +826,8 @@ TEST(TasksTest, threadBindingAmongNormalTasks)
 {
     auto task = []() { return pairedResult(1); };
 
-    QList<FutureSP<Result<int>>> boundResults;
-    QList<FutureSP<Result<int>>> otherResults;
+    QVector<FutureSP<Result<int>>> boundResults;
+    QVector<FutureSP<Result<int>>> otherResults;
     int n = TasksDispatcher::instance()->capacity() * 10;
     for (int i = 0; i < n; ++i) {
         if (i % 5)
@@ -854,9 +854,9 @@ TEST(TasksTest, threadBindingToDifferentKeysAmongOtherTasks)
 {
     auto task = []() { return pairedResult(1); };
 
-    QList<FutureSP<Result<int>>> firstResults;
-    QList<FutureSP<Result<int>>> secondResults;
-    QList<FutureSP<Result<int>>> otherResults;
+    QVector<FutureSP<Result<int>>> firstResults;
+    QVector<FutureSP<Result<int>>> secondResults;
+    QVector<FutureSP<Result<int>>> otherResults;
     int n = TasksDispatcher::instance()->capacity() * 20;
     for (int i = 0; i < n; ++i) {
         if (i % 5)

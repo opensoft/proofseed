@@ -35,7 +35,7 @@ public:
     TasksDispatcher operator=(const TasksDispatcher &&) = delete;
 
     qint32 capacity() const;
-    qint32 restrictorCapacity(RestrictionType restrictionType, const QString &restrictor = QLatin1String()) const;
+    qint32 restrictorCapacity(RestrictionType restrictionType, const QString &restrictor = QString()) const;
     void setCapacity(qint32 capacity);
     void addCustomRestrictor(const QString &restrictor, qint32 capacity);
 
