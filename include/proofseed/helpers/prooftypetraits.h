@@ -3,13 +3,32 @@
 #include <type_traits>
 
 namespace Proof {
-template <typename Checkable>
-struct HasTypeParams : std::false_type
+namespace detail {
+template <int current>
+struct level : level<current - 1>
 {};
+template <>
+struct level<0>
+{};
+} // namespace detail
+
+template <typename Checkable>
+struct TypeParamsCount
+{
+    static constexpr int value = 0;
+};
 
 template <template <typename...> class Wrapper, typename... Args>
-struct HasTypeParams<Wrapper<Args...>> : std::true_type
-{};
+struct TypeParamsCount<Wrapper<Args...>>
+{
+    static constexpr int value = sizeof...(Args);
+};
+
+template <typename Checkable>
+struct HasTypeParams
+{
+    static constexpr bool value = TypeParamsCount<Checkable>::value;
+};
 
 template <typename Checkable, template <typename...> class... Wrapper>
 struct IsSpecialization : std::false_type

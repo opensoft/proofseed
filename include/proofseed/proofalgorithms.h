@@ -11,12 +11,8 @@
 namespace Proof {
 namespace algorithms {
 namespace detail {
-template <int current>
-struct level : level<current - 1>
-{};
-template <>
-struct level<0>
-{};
+template <int x>
+using level = Proof::detail::level<x>;
 
 template <typename C, typename T>
 auto addToContainer(C &container, const T &value) -> decltype(container.push_back(value), void())
@@ -354,8 +350,7 @@ auto forEach(const Container<InputKey, InputValue> &container, const Func &func)
 }
 
 // filter, map and reduce are not lazy, they copy values.
-// It is fine for almost all our cases with DTOs and PODs, but still is O(n).
-// O(n) though is good enough for our amounts of data.
+// It is fine for almost all our cases with DTOs and PODs, but still is O(n). O(n) though is good enough for our amounts of data.
 // If ever lazy variant will be needed probably we will need to use boost ranges or something similar then.
 template <typename Container, typename Predicate>
 auto filter(const Container &container, const Predicate &predicate)
@@ -512,6 +507,27 @@ inline auto keyIdentity()
 inline auto valueIdentity()
 {
     return [](const auto &, const auto &x) { return x; };
+}
+
+template <typename Container, typename Input = typename Container::value_type,
+          typename = typename std::enable_if_t<!Proof::HasTypeParams<Container>::value>>
+QSet<Input> toSet(const Container &container)
+{
+    return map(container, identity(), QSet<Input>());
+}
+
+template <typename Container, typename Input = typename Container::value_type,
+          typename = typename std::enable_if_t<!Proof::HasTypeParams<Container>::value>>
+QVector<Input> toVector(const Container &container)
+{
+    return map(container, identity(), QVector<Input>());
+}
+
+template <typename Container, typename Input = typename Container::value_type,
+          typename = typename std::enable_if_t<!Proof::HasTypeParams<Container>::value>>
+QList<Input> toList(const Container &container)
+{
+    return map(container, identity(), QList<Input>());
 }
 
 template <template <typename...> class Container, typename Input>
