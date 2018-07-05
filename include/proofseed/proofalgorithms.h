@@ -208,8 +208,8 @@ auto mapInPlace(Container<InputKey, InputValue> &container, const Func &func)
 }
 
 //Double socketed stl type
-template <template <typename...> class Container, typename InputKey, typename InputValue, typename Func>
-auto mapInPlace(Container<InputKey, InputValue> &container, const Func &func)
+template <template <typename...> class Container, typename InputKey, typename InputValue, typename Func, typename... Args>
+auto mapInPlace(Container<InputKey, InputValue, Args...> &container, const Func &func)
     -> decltype(container.begin()->second = func(qAsConst(container.begin()->first), qAsConst(container.begin()->second)),
                 void())
 {
@@ -454,8 +454,9 @@ auto map(const Container<InputKey, InputValue> &container, const Func &func, Res
 }
 
 //Double socketed stl type
-template <template <typename...> class Container, typename InputKey, typename InputValue, typename Func, typename Result>
-auto map(const Container<InputKey, InputValue> &container, const Func &func, Result destination)
+template <template <typename...> class Container, typename InputKey, typename InputValue, typename Func,
+          typename Result, typename... Args>
+auto map(const Container<InputKey, InputValue, Args...> &container, const Func &func, Result destination)
     -> decltype(detail::addToContainer(destination, func(detail::beginIterator(container)->first,
                                                          detail::beginIterator(container)->second)),
                 Result())
@@ -487,9 +488,9 @@ auto map(const Container<Input> &container, const Func &func)
 
 //Double socketed type, short version
 template <template <typename...> class Container, typename InputKey, typename InputValue, typename Func,
-          typename OutputKey = typename std::result_of_t<Func(InputKey, InputValue)>::first_type,
+          typename... Args, typename OutputKey = typename std::result_of_t<Func(InputKey, InputValue)>::first_type,
           typename OutputValue = typename std::result_of_t<Func(InputKey, InputValue)>::second_type>
-Container<OutputKey, OutputValue> map(const Container<InputKey, InputValue> &container, const Func &func)
+Container<OutputKey, OutputValue> map(const Container<InputKey, InputValue, Args...> &container, const Func &func)
 {
     return map(container, func, Container<OutputKey, OutputValue>());
 }
@@ -548,38 +549,38 @@ QList<Input> toList(const Container<Input> &container)
     return map(container, identity(), QList<Input>());
 }
 
-template <template <typename...> class Container, typename InputKey, typename InputValue>
-QSet<InputKey> toKeysSet(const Container<InputKey, InputValue> &container)
+template <template <typename...> class Container, typename InputKey, typename InputValue, typename... Args>
+QSet<InputKey> toKeysSet(const Container<InputKey, InputValue, Args...> &container)
 {
     return map(container, keyIdentity(), QSet<InputKey>());
 }
 
-template <template <typename...> class Container, typename InputKey, typename InputValue>
-QVector<InputKey> toKeysVector(const Container<InputKey, InputValue> &container)
+template <template <typename...> class Container, typename InputKey, typename InputValue, typename... Args>
+QVector<InputKey> toKeysVector(const Container<InputKey, InputValue, Args...> &container)
 {
     return map(container, keyIdentity(), QVector<InputKey>());
 }
 
-template <template <typename...> class Container, typename InputKey, typename InputValue>
-QList<InputKey> toKeysList(const Container<InputKey, InputValue> &container)
+template <template <typename...> class Container, typename InputKey, typename InputValue, typename... Args>
+QList<InputKey> toKeysList(const Container<InputKey, InputValue, Args...> &container)
 {
     return map(container, keyIdentity(), QList<InputKey>());
 }
 
-template <template <typename...> class Container, typename InputKey, typename InputValue>
-QSet<InputValue> toValuesSet(const Container<InputKey, InputValue> &container)
+template <template <typename...> class Container, typename InputKey, typename InputValue, typename... Args>
+QSet<InputValue> toValuesSet(const Container<InputKey, InputValue, Args...> &container)
 {
     return map(container, valueIdentity(), QSet<InputValue>());
 }
 
-template <template <typename...> class Container, typename InputKey, typename InputValue>
-QVector<InputValue> toValuesVector(const Container<InputKey, InputValue> &container)
+template <template <typename...> class Container, typename InputKey, typename InputValue, typename... Args>
+QVector<InputValue> toValuesVector(const Container<InputKey, InputValue, Args...> &container)
 {
     return map(container, valueIdentity(), QVector<InputValue>());
 }
 
-template <template <typename...> class Container, typename InputKey, typename InputValue>
-QList<InputValue> toValuesList(const Container<InputKey, InputValue> &container)
+template <template <typename...> class Container, typename InputKey, typename InputValue, typename... Args>
+QList<InputValue> toValuesList(const Container<InputKey, InputValue, Args...> &container)
 {
     return map(container, valueIdentity(), QList<InputValue>());
 }
