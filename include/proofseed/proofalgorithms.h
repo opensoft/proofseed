@@ -587,24 +587,47 @@ QList<InputValue> toValuesList(const Container<InputKey, InputValue, Args...> &c
 
 template <typename Container, typename Func, typename Result>
 auto reduce(const Container &container, const Func &func, Result acc)
-    -> decltype(acc = func(acc, *detail::beginIterator(container)), Result())
+    -> decltype(acc = func(qAsConst(acc), *detail::beginIterator(container)), Result())
 {
     auto it = detail::beginIterator(container);
     auto end = detail::endIterator(container);
     for (; it != end; ++it)
-        acc = func(acc, *it);
+        acc = func(qAsConst(acc), *it);
     return acc;
 }
 
 template <typename Container, typename Func, typename Result>
 auto reduce(const Container &container, const Func &func, Result acc)
-    -> decltype(acc = func(acc, detail::beginIterator(container).key(), detail::beginIterator(container).value()),
+    -> decltype(acc = func(qAsConst(acc), detail::beginIterator(container).key(),
+                           detail::beginIterator(container).value()),
                 Result())
 {
     auto it = detail::beginIterator(container);
     auto end = detail::endIterator(container);
     for (; it != end; ++it)
-        acc = func(acc, it.key(), it.value());
+        acc = func(qAsConst(acc), it.key(), it.value());
+    return acc;
+}
+
+template <typename Container, typename Func, typename Result>
+auto reduceByMutation(const Container &container, const Func &func, Result acc)
+    -> decltype(func(acc, *detail::beginIterator(container)), Result())
+{
+    auto it = detail::beginIterator(container);
+    auto end = detail::endIterator(container);
+    for (; it != end; ++it)
+        func(acc, *it);
+    return acc;
+}
+
+template <typename Container, typename Func, typename Result>
+auto reduceByMutation(const Container &container, const Func &func, Result acc)
+    -> decltype(func(acc, detail::beginIterator(container).key(), detail::beginIterator(container).value()), Result())
+{
+    auto it = detail::beginIterator(container);
+    auto end = detail::endIterator(container);
+    for (; it != end; ++it)
+        func(acc, it.key(), it.value());
     return acc;
 }
 
