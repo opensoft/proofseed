@@ -157,7 +157,7 @@ auto run(const Container<Input> &data, Task &&task, RestrictionType restrictionT
                                 restrictor](const Input &x) -> FutureSP<Output> {
                                    return run([x, task]() -> Output { return task(x); }, restrictionType, restrictor);
                                });
-    return Future<Output>::sequence(seq);
+    return Future<>::sequence(seq);
 }
 
 template <template <typename...> class Container, typename Input, typename Task,
@@ -173,7 +173,7 @@ auto run(const Container<Input> &data, Task &&task, RestrictionType restrictionT
                                [task = std::forward<Task>(task), restrictionType, restrictor](const Input &x) -> Output {
                                    return run([x, task]() -> Output { return task(x); }, restrictionType, restrictor);
                                });
-    return Future<OutputValue>::sequence(seq);
+    return Future<>::sequence(seq);
 }
 
 template <template <typename...> class Container, typename Input, typename Task,
@@ -183,13 +183,13 @@ auto run(const Container<Input> &data, Task &&task, RestrictionType restrictionT
          const QString &restrictor = QString()) -> decltype(task(*(data.cbegin())), FutureSP<bool>())
 {
     if (!data.size())
-        return Future<bool>::successful(true);
+        return Future<>::successful(true);
     auto seq = algorithms::map(data,
                                [task = std::forward<Task>(task), restrictionType,
                                 restrictor](const Input &x) -> FutureSP<bool> {
                                    return run([x, task]() { task(x); }, restrictionType, restrictor);
                                });
-    return Future<bool>::sequence(seq)->map([](const auto &) { return true; });
+    return Future<>::sequence(seq)->andThenValue(true);
 }
 
 template <template <typename...> class Container, typename Input, typename Task,
@@ -207,7 +207,7 @@ auto run(const Container<Input> &data, Task &&task, RestrictionType restrictionT
                                    return run([index, x, task]() -> Output { return task(index, x); }, restrictionType,
                                               restrictor);
                                });
-    return Future<Output>::sequence(seq);
+    return Future<>::sequence(seq);
 }
 
 template <template <typename...> class Container, typename Input, typename Task,
@@ -226,7 +226,7 @@ auto run(const Container<Input> &data, Task &&task, RestrictionType restrictionT
                                    return run([index, x, task]() -> Output { return task(index, x); }, restrictionType,
                                               restrictor);
                                });
-    return Future<OutputValue>::sequence(seq);
+    return Future<>::sequence(seq);
 }
 
 template <template <typename...> class Container, typename Input, typename Task,
@@ -236,13 +236,13 @@ auto run(const Container<Input> &data, Task &&task, RestrictionType restrictionT
          const QString &restrictor = QString()) -> decltype(task(0ll, *(data.cbegin())), FutureSP<bool>())
 {
     if (!data.size())
-        return Future<bool>::successful(true);
+        return Future<>::successful(true);
     auto seq = algorithms::map(data,
                                [task = std::forward<Task>(task), restrictionType,
                                 restrictor](long long index, const Input &x) -> FutureSP<bool> {
                                    return run([index, x, task]() { task(index, x); }, restrictionType, restrictor);
                                });
-    return Future<bool>::sequence(seq)->map([](const auto &) { return true; });
+    return Future<>::sequence(seq)->andThenValue(true);
 }
 
 template <template <typename...> class Container, typename Input, typename Task,

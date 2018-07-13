@@ -20,6 +20,26 @@ TEST(FutureTest, successful)
     EXPECT_FALSE(future->failureReason().exists);
 }
 
+TEST(FutureTest, successfulEmpty)
+{
+    FutureSP<int> future = Future<int>::successful();
+    ASSERT_TRUE(future->completed());
+    EXPECT_TRUE(future->succeeded());
+    EXPECT_FALSE(future->failed());
+    EXPECT_EQ(0, future->result());
+    EXPECT_FALSE(future->failureReason().exists);
+}
+
+TEST(FutureTest, successfulNoT)
+{
+    FutureSP<int> future = Future<>::successful(42);
+    ASSERT_TRUE(future->completed());
+    EXPECT_TRUE(future->succeeded());
+    EXPECT_FALSE(future->failed());
+    EXPECT_EQ(42, future->result());
+    EXPECT_FALSE(future->failureReason().exists);
+}
+
 TEST(FutureTest, fail)
 {
     FutureSP<int> future = Future<int>::fail(Failure("failed", 0, 0));
@@ -465,11 +485,11 @@ TEST(FutureTest, filterNegativeCustomRejectedL)
     EXPECT_EQ("Custom", filteredFuture->failureReason().message);
 }
 
-TEST(FutureTest, reduce)
+TEST(FutureTest, innerReduce)
 {
     PromiseSP<QVector<int>> promise = PromiseSP<QVector<int>>::create();
     FutureSP<QVector<int>> future = promise->future();
-    FutureSP<int> reducedFuture = future->reduce([](int acc, int x) { return acc + x; }, 0);
+    FutureSP<int> reducedFuture = future->innerReduce([](int acc, int x) { return acc + x; }, 0);
     EXPECT_FALSE(reducedFuture->completed());
     promise->success({1, 2, 3, 4, 5});
     QVector<int> result = future->result();
@@ -482,7 +502,157 @@ TEST(FutureTest, reduce)
     EXPECT_EQ(15, reducedFuture->result());
 }
 
-TEST(FutureTest, sequenceQList)
+TEST(FutureTest, innerReduceByMutation)
+{
+    PromiseSP<QVector<int>> promise = PromiseSP<QVector<int>>::create();
+    FutureSP<QVector<int>> future = promise->future();
+    FutureSP<int> reducedFuture = future->innerReduceByMutation([](int &acc, int x) { acc += x; }, 0);
+    EXPECT_FALSE(reducedFuture->completed());
+    promise->success({1, 2, 3, 4, 5});
+    QVector<int> result = future->result();
+    ASSERT_EQ(5, result.count());
+    for (int i = 0; i < 5; ++i)
+        EXPECT_EQ(i + 1, result[i]);
+    ASSERT_TRUE(reducedFuture->completed());
+    EXPECT_TRUE(reducedFuture->succeeded());
+    EXPECT_FALSE(reducedFuture->failed());
+    EXPECT_EQ(15, reducedFuture->result());
+}
+
+TEST(FutureTest, innerMap)
+{
+    PromiseSP<QVector<int>> promise = PromiseSP<QVector<int>>::create();
+    FutureSP<QVector<int>> future = promise->future();
+    FutureSP<QVector<int>> mappedFuture = future->innerMap([](int x) { return x + 10; }, QVector<int>());
+    EXPECT_FALSE(mappedFuture->completed());
+    promise->success({1, 2, 3, 4, 5});
+    ASSERT_TRUE(mappedFuture->completed());
+    EXPECT_TRUE(mappedFuture->succeeded());
+    EXPECT_FALSE(mappedFuture->failed());
+    QVector<int> result = mappedFuture->result();
+    ASSERT_EQ(5, result.count());
+    for (int i = 0; i < 5; ++i)
+        EXPECT_EQ(i + 11, result[i]);
+}
+
+TEST(FutureTest, innerMapShort)
+{
+    PromiseSP<QVector<int>> promise = PromiseSP<QVector<int>>::create();
+    FutureSP<QVector<int>> future = promise->future();
+    FutureSP<QVector<int>> mappedFuture = future->innerMap([](int x) { return x + 10; });
+    EXPECT_FALSE(mappedFuture->completed());
+    promise->success({1, 2, 3, 4, 5});
+    ASSERT_TRUE(mappedFuture->completed());
+    EXPECT_TRUE(mappedFuture->succeeded());
+    EXPECT_FALSE(mappedFuture->failed());
+    QVector<int> result = mappedFuture->result();
+    ASSERT_EQ(5, result.count());
+    for (int i = 0; i < 5; ++i)
+        EXPECT_EQ(i + 11, result[i]);
+}
+
+TEST(FutureTest, innerMapOtherType)
+{
+    PromiseSP<QVector<int>> promise = PromiseSP<QVector<int>>::create();
+    FutureSP<QVector<int>> future = promise->future();
+    FutureSP<QVector<double>> mappedFuture = future->innerMap([](int x) -> double { return x + 10.0; },
+                                                              QVector<double>());
+    EXPECT_FALSE(mappedFuture->completed());
+    promise->success({1, 2, 3, 4, 5});
+    ASSERT_TRUE(mappedFuture->completed());
+    EXPECT_TRUE(mappedFuture->succeeded());
+    EXPECT_FALSE(mappedFuture->failed());
+    QVector<double> result = mappedFuture->result();
+    ASSERT_EQ(5, result.count());
+    for (int i = 0; i < 5; ++i)
+        EXPECT_DOUBLE_EQ(i + 11, result[i]);
+}
+
+TEST(FutureTest, innerMapOtherTypeShort)
+{
+    PromiseSP<QVector<int>> promise = PromiseSP<QVector<int>>::create();
+    FutureSP<QVector<int>> future = promise->future();
+    FutureSP<QVector<double>> mappedFuture = future->innerMap([](int x) -> double { return x + 10.0; });
+    EXPECT_FALSE(mappedFuture->completed());
+    promise->success({1, 2, 3, 4, 5});
+    ASSERT_TRUE(mappedFuture->completed());
+    EXPECT_TRUE(mappedFuture->succeeded());
+    EXPECT_FALSE(mappedFuture->failed());
+    QVector<double> result = mappedFuture->result();
+    ASSERT_EQ(5, result.count());
+    for (int i = 0; i < 5; ++i)
+        EXPECT_DOUBLE_EQ(i + 11, result[i]);
+}
+
+TEST(FutureTest, innerMapOtherContainer)
+{
+    PromiseSP<QVector<int>> promise = PromiseSP<QVector<int>>::create();
+    FutureSP<QVector<int>> future = promise->future();
+    FutureSP<QMap<int, bool>> mappedFuture = future->innerMap([](int x) { return qMakePair(x, x % 2); },
+                                                              QMap<int, bool>());
+    EXPECT_FALSE(mappedFuture->completed());
+    promise->success({1, 2, 3, 4, 5});
+    ASSERT_TRUE(mappedFuture->completed());
+    EXPECT_TRUE(mappedFuture->succeeded());
+    EXPECT_FALSE(mappedFuture->failed());
+    QMap<int, bool> result = mappedFuture->result();
+    ASSERT_EQ(5, result.count());
+    for (int i = 1; i <= 5; ++i) {
+        EXPECT_TRUE(result.contains(i));
+        EXPECT_EQ(i % 2, result[i]);
+    }
+}
+
+TEST(FutureTest, innerMapWithIndex)
+{
+    PromiseSP<QVector<int>> promise = PromiseSP<QVector<int>>::create();
+    FutureSP<QVector<int>> future = promise->future();
+    FutureSP<QVector<int>> mappedFuture = future->innerMap([](long long index, int x) { return x + index * 10; },
+                                                           QVector<int>());
+    EXPECT_FALSE(mappedFuture->completed());
+    promise->success({1, 2, 3, 4, 5});
+    ASSERT_TRUE(mappedFuture->completed());
+    EXPECT_TRUE(mappedFuture->succeeded());
+    EXPECT_FALSE(mappedFuture->failed());
+    QVector<int> result = mappedFuture->result();
+    ASSERT_EQ(5, result.count());
+    for (int i = 0; i < 5; ++i)
+        EXPECT_EQ(i * 10 + (i + 1), result[i]);
+}
+
+TEST(FutureTest, innerMapWithIndexShort)
+{
+    PromiseSP<QVector<int>> promise = PromiseSP<QVector<int>>::create();
+    FutureSP<QVector<int>> future = promise->future();
+    FutureSP<QVector<long long>> mappedFuture = future->innerMap([](long long index, int x) { return x + index * 10; });
+    EXPECT_FALSE(mappedFuture->completed());
+    promise->success({1, 2, 3, 4, 5});
+    ASSERT_TRUE(mappedFuture->completed());
+    EXPECT_TRUE(mappedFuture->succeeded());
+    EXPECT_FALSE(mappedFuture->failed());
+    QVector<long long> result = mappedFuture->result();
+    ASSERT_EQ(5, result.count());
+    for (int i = 0; i < 5; ++i)
+        EXPECT_EQ(i * 10 + (i + 1), result[i]);
+}
+
+TEST(FutureTest, innerFilter)
+{
+    PromiseSP<QVector<int>> promise = PromiseSP<QVector<int>>::create();
+    FutureSP<QVector<int>> future = promise->future();
+    FutureSP<QVector<int>> mappedFuture = future->innerFilter([](int x) { return x % 2; });
+    EXPECT_FALSE(mappedFuture->completed());
+    promise->success({1, 2, 3, 4, 5});
+    ASSERT_TRUE(mappedFuture->completed());
+    EXPECT_TRUE(mappedFuture->succeeded());
+    EXPECT_FALSE(mappedFuture->failed());
+    QVector<int> result = mappedFuture->result();
+    ASSERT_EQ(3, result.count());
+    for (int i = 0; i < 3; ++i)
+        EXPECT_EQ(i * 2 + 1, result[i]);
+}
+
+TEST(FutureTest, sequenceQVector)
 {
     int n = 5;
     QVector<PromiseSP<int>> promises;
@@ -506,49 +676,14 @@ TEST(FutureTest, sequenceQList)
         EXPECT_EQ(i * 2, result[i]);
 }
 
-TEST(FutureTest, sequenceQListNegative)
+TEST(FutureTest, sequenceQVectorNoT)
 {
     int n = 5;
     QVector<PromiseSP<int>> promises;
     for (int i = 0; i < n; ++i)
         promises << PromiseSP<int>::create();
     QVector<FutureSP<int>> futures = algorithms::map(promises, [](auto p) { return p->future(); });
-    FutureSP<QVector<int>> sequencedFuture = Future<int>::sequence(futures);
-    for (int i = 0; i < n; ++i)
-        EXPECT_FALSE(futures[i]->completed());
-    EXPECT_FALSE(sequencedFuture->completed());
-
-    for (int i = 0; i < n - 2; ++i) {
-        promises[i]->success(i * 2);
-        EXPECT_FALSE(sequencedFuture->completed());
-    }
-    promises[n - 2]->failure(Failure("failed", 0, 0));
-    ASSERT_TRUE(sequencedFuture->completed());
-    EXPECT_FALSE(sequencedFuture->succeeded());
-    EXPECT_TRUE(sequencedFuture->failed());
-    EXPECT_EQ("failed", sequencedFuture->failureReason().message);
-    EXPECT_TRUE(sequencedFuture->result().isEmpty());
-}
-
-TEST(FutureTest, sequenceQListEmpty)
-{
-    QVector<FutureSP<int>> futures;
-    FutureSP<QVector<int>> sequencedFuture = Future<int>::sequence(futures);
-    ASSERT_TRUE(sequencedFuture->completed());
-    EXPECT_TRUE(sequencedFuture->succeeded());
-    EXPECT_FALSE(sequencedFuture->failed());
-    QVector<int> result = sequencedFuture->result();
-    EXPECT_EQ(0, result.count());
-}
-
-TEST(FutureTest, sequenceQVector)
-{
-    int n = 5;
-    QVector<PromiseSP<int>> promises;
-    for (int i = 0; i < n; ++i)
-        promises << PromiseSP<int>::create();
-    QVector<FutureSP<int>> futures = algorithms::map(promises, [](auto p) { return p->future(); });
-    FutureSP<QVector<int>> sequencedFuture = Future<int>::sequence(futures);
+    FutureSP<QVector<int>> sequencedFuture = Future<>::sequence(futures);
     for (int i = 0; i < n; ++i)
         EXPECT_FALSE(futures[i]->completed());
 
@@ -682,14 +817,13 @@ TEST(FutureTest, failureFromAndThen)
     EXPECT_EQ(0, mappedOnceMoreFuture->result());
 }
 
-TEST(FutureTest, failureFromReduce)
+TEST(FutureTest, failureFromInnerReduce)
 {
     PromiseSP<int> promise = PromiseSP<int>::create();
     FutureSP<int> future = promise->future();
     FutureSP<QVector<int>> mappedFuture = future->map([](int x) { return QVector<int>{x, x * 2}; });
-    FutureSP<int> mappedAgainFuture = mappedFuture->reduce([](int, int) -> int { return WithFailure("failed", 0, 0); },
-                                                           0);
-    FutureSP<int> mappedOnceMoreFuture = mappedAgainFuture->map([](int) -> int { return 24; });
+    auto reducedFuture = mappedFuture->innerReduce([](int, int) -> int { return WithFailure("failed", 0, 0); }, 0);
+    FutureSP<int> mappedOnceMoreFuture = reducedFuture->map([](int) -> int { return 24; });
     EXPECT_FALSE(mappedFuture->completed());
     promise->success(42);
     EXPECT_EQ(42, future->result());
@@ -697,11 +831,11 @@ TEST(FutureTest, failureFromReduce)
     EXPECT_TRUE(mappedFuture->succeeded());
     EXPECT_FALSE(mappedFuture->failed());
     ASSERT_EQ(2, mappedFuture->result().count());
-    ASSERT_TRUE(mappedAgainFuture->completed());
-    EXPECT_FALSE(mappedAgainFuture->succeeded());
-    EXPECT_TRUE(mappedAgainFuture->failed());
-    EXPECT_EQ("failed", mappedAgainFuture->failureReason().message);
-    EXPECT_EQ(0, mappedAgainFuture->result());
+    ASSERT_TRUE(reducedFuture->completed());
+    EXPECT_FALSE(reducedFuture->succeeded());
+    EXPECT_TRUE(reducedFuture->failed());
+    EXPECT_EQ("failed", reducedFuture->failureReason().message);
+    EXPECT_EQ(0, reducedFuture->result());
     ASSERT_TRUE(mappedOnceMoreFuture->completed());
     EXPECT_FALSE(mappedOnceMoreFuture->succeeded());
     EXPECT_TRUE(mappedOnceMoreFuture->failed());
@@ -930,4 +1064,33 @@ TEST(FutureTest, zipRightFails)
     EXPECT_FALSE(future->succeeded());
     EXPECT_TRUE(future->failed());
     EXPECT_EQ("failed", future->failureReason().message);
+}
+
+TEST(FutureTest, zipValue)
+{
+    PromiseSP<double> firstPromise = PromiseSP<double>::create();
+    FutureSP<std::tuple<double, int>> future = firstPromise->future()->zipValue(42);
+    EXPECT_FALSE(future->succeeded());
+    firstPromise->success(5.0);
+
+    ASSERT_TRUE(future->completed());
+    EXPECT_TRUE(future->succeeded());
+    EXPECT_FALSE(future->failed());
+    EXPECT_DOUBLE_EQ(5.0, std::get<0>(future->result()));
+    EXPECT_EQ(42, std::get<1>(future->result()));
+}
+
+TEST(FutureTest, zipValueLeftTuple)
+{
+    PromiseSP<std::tuple<int, double>> firstPromise = PromiseSP<std::tuple<int, double>>::create();
+    FutureSP<std::tuple<int, double, QString>> future = firstPromise->future()->zipValue(QStringLiteral("Done"));
+    EXPECT_FALSE(future->succeeded());
+    firstPromise->success(std::make_tuple(42, 5.0));
+
+    ASSERT_TRUE(future->completed());
+    EXPECT_TRUE(future->succeeded());
+    EXPECT_FALSE(future->failed());
+    EXPECT_EQ(42, std::get<0>(future->result()));
+    EXPECT_DOUBLE_EQ(5.0, std::get<1>(future->result()));
+    EXPECT_EQ("Done", std::get<2>(future->result()));
 }

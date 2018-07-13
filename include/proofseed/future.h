@@ -18,7 +18,7 @@
 
 namespace Proof {
 //TODO: add Promise<void>, Future<void> if ever will be needed
-template <typename T>
+template <typename... T>
 class Future;
 template <typename T>
 using FutureSP = QSharedPointer<Future<T>>;
@@ -41,6 +41,9 @@ struct Failure
     explicit Failure(const QVariant &data) : exists(true), data(data) {}
     Failure() : exists(false), moduleCode(0), errorCode(0), hints(NoHint) {}
     operator QString() { return message; }
+    Failure withMessage(const QString &msg) const { return Failure(msg, moduleCode, errorCode, hints, data); }
+    Failure withCode(long module, long error) const { return Failure(message, module, error, hints, data); }
+    Failure withData(const QVariant &d) const { return Failure(message, moduleCode, errorCode, hints, d); }
     bool exists = false;
     long moduleCode = 0;
     long errorCode = 0;
@@ -163,9 +166,9 @@ private:
 };
 
 template <typename T>
-class Future
+class Future<T>
 {
-    template <typename U>
+    template <typename... U>
     friend class Future;
     friend class Promise<T>;
     friend struct WithFailure;
@@ -348,12 +351,54 @@ public:
     }
 
     template <typename Func, typename Result>
-    auto reduce(Func &&f, Result acc) -> decltype(FutureSP<Result>())
+    auto innerReduce(Func &&f, Result acc) -> decltype(algorithms::reduce(T(), f, acc), FutureSP<Result>())
     {
         FutureSP<Result> result = Future<Result>::create();
-        onSuccess([result, f = std::forward<Func>(f), acc](const T &v) {
-            result->fillSuccess(algorithms::reduce(v, f, acc));
+        onSuccess([result, f = std::forward<Func>(f), acc = std::move(acc)](const T &v) {
+            result->fillSuccess(algorithms::reduce(v, f, std::move(acc)));
         });
+        onFailure([result](const Failure &failure) { result->fillFailure(failure); });
+        return result;
+    }
+
+    template <typename Func, typename Result>
+    auto innerReduceByMutation(Func &&f, Result acc)
+        -> decltype(algorithms::reduceByMutation(T(), f, acc), FutureSP<Result>())
+    {
+        FutureSP<Result> result = Future<Result>::create();
+        onSuccess([result, f = std::forward<Func>(f), acc = std::move(acc)](const T &v) {
+            result->fillSuccess(algorithms::reduceByMutation(v, f, std::move(acc)));
+        });
+        onFailure([result](const Failure &failure) { result->fillFailure(failure); });
+        return result;
+    }
+
+    template <typename Func, typename Result>
+    auto innerMap(Func &&f, Result dest) -> decltype(algorithms::map(T(), f, dest), FutureSP<Result>())
+    {
+        FutureSP<Result> result = Future<Result>::create();
+        onSuccess([result, f = std::forward<Func>(f), dest = std::move(dest)](const T &v) {
+            result->fillSuccess(algorithms::map(v, f, std::move(dest)));
+        });
+        onFailure([result](const Failure &failure) { result->fillFailure(failure); });
+        return result;
+    }
+
+    template <typename Func>
+    auto innerMap(Func &&f) -> decltype(algorithms::map(T(), f), FutureSP<decltype(algorithms::map(T(), f))>())
+    {
+        using Result = decltype(algorithms::map(T(), f));
+        FutureSP<Result> result = Future<Result>::create();
+        onSuccess([result, f = std::forward<Func>(f)](const T &v) { result->fillSuccess(algorithms::map(v, f)); });
+        onFailure([result](const Failure &failure) { result->fillFailure(failure); });
+        return result;
+    }
+
+    template <typename Func>
+    auto innerFilter(Func &&f) -> decltype(algorithms::filter(T(), f), FutureSP<T>())
+    {
+        FutureSP<T> result = Future<T>::create();
+        onSuccess([result, f = std::forward<Func>(f)](const T &v) { result->fillSuccess(algorithms::filter(v, f)); });
         onFailure([result](const Failure &failure) { result->fillFailure(failure); });
         return result;
     }
@@ -389,6 +434,12 @@ public:
                 return std::tuple_cat(detail::TupleMaker<T>::result(v), argsResult);
             });
         });
+    }
+
+    template <typename T2, typename Result = typename futures::detail::Zipper<std::true_type, FutureSP<T>, FutureSP<T2>>::type>
+    FutureSP<Result> zipValue(const T2 &value)
+    {
+        return zip(Future<T2>::successful(value));
     }
 
     static auto successful() -> decltype(T(), FutureSP<T>())
@@ -535,6 +586,31 @@ private:
     SpinLock m_mainLock;
     FutureWP<T> m_weakSelf;
 };
+
+template <>
+class Future<>
+{
+public:
+    Future() = delete;
+    Future(const Future &) = delete;
+    Future(Future &&) = delete;
+    Future &operator=(const Future &) = delete;
+    Future &operator=(Future &&) = delete;
+    ~Future() = delete;
+
+    template <typename T>
+    static FutureSP<T> successful(const T &value)
+    {
+        return Future<T>::successful(value);
+    }
+
+    template <typename T>
+    static FutureSP<QVector<T>> sequence(const QVector<FutureSP<T>> &container)
+    {
+        return Future<T>::sequence(container);
+    }
+};
+
 } // namespace Proof
 
 #endif // PROOF_FUTURE_H
