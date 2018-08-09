@@ -1,12 +1,12 @@
 // clazy:skip
 
-#include "proofcore/future.h"
-#include "proofcore/proofalgorithms.h"
+#include "proofseed/future.h"
+#include "proofseed/proofalgorithms.h"
+
+#include "gtest/test_global.h"
 
 #include <QDateTime>
 #include <QThread>
-
-#include "gtest/test_global.h"
 
 using namespace Proof;
 

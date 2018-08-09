@@ -1,4 +1,4 @@
-#include "spinlock.h"
+#include "proofseed/spinlock.h"
 
 #include <QThread>
 

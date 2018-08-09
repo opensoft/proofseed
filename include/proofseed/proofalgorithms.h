@@ -1,7 +1,7 @@
 #ifndef PROOFALGORITHMS_H
 #define PROOFALGORITHMS_H
 
-#include "proofcore/helpers/prooftypetraits.h"
+#include "proofseed/helpers/prooftypetraits.h"
 
 #include <QPair>
 

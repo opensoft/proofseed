@@ -1,14 +1,14 @@
 // clazy:skip
 
-#include "proofcore/proofalgorithms.h"
+#include "proofseed/proofalgorithms.h"
+
+#include "gtest/test_global.h"
 
 #include <QJsonArray>
 #include <QList>
 #include <QMap>
 #include <QSet>
 #include <QVector>
-
-#include "gtest/test_global.h"
 
 #include <set>
 #include <vector>

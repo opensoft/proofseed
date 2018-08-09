@@ -1,0 +1,4 @@
+[submodule "3rdparty/optional"]
+	path = 3rdparty/optional
+	url = https://github.com/opensoft/Optional.git
+	branch = proofed

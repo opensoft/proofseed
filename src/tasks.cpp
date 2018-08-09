@@ -1,6 +1,6 @@
-#include "proofcore/tasks.h"
+#include "proofseed/tasks.h"
 
-#include "proofcore/spinlock.h"
+#include "proofseed/spinlock.h"
 
 #include <QCoreApplication>
 #include <QMutex>
@@ -13,7 +13,6 @@
 #include <set>
 #include <vector>
 
-constexpr qint32 HTTP_CAPACITY = 6;
 static const qint32 INTENSIVE_CAPACITY = qMax(QThread::idealThreadCount(), 1);
 constexpr qint32 CUSTOM_CAPACITY = 16;
 constexpr qint32 DEFAULT_TOTAL_CAPACITY = 64;
@@ -121,8 +120,6 @@ qint32 TasksDispatcher::restrictorCapacity(RestrictionType restrictionType, cons
         return INTENSIVE_CAPACITY;
     else if (restrictor.isEmpty())
         return capacity();
-    else if (restrictionType == RestrictionType::Http)
-        return HTTP_CAPACITY;
     d_ptr->mainLock.lock();
     auto resultIt = d_ptr->customRestrictorsCapacity.find(restrictor);
     qint32 result = d_ptr->customRestrictorsCapacity.cend() == resultIt ? CUSTOM_CAPACITY : resultIt->second;
@@ -157,7 +154,6 @@ void TasksDispatcher::fireSignalWaiters()
     d_ptr->currentEventLoopStarted = true;
     d_ptr->signalWaitersEventLoop->exec();
     clearEventLoop();
-    qCDebug(proofCoreTasksExtraLog) << "Thread" << QThread::currentThread() << ": signal waiters fired";
 }
 
 void TasksDispatcher::insertTaskInfo(std::function<void()> &&wrappedTask, RestrictionType restrictionType,
@@ -269,9 +265,6 @@ bool TasksDispatcherPrivate::tryTaskScheduling(const TaskInfo &task, qint32 work
     } else if (!task.restrictor.isEmpty()) {
         qint32 capacityLeft = capacity;
         switch (task.restrictionType) {
-        case RestrictionType::Http:
-            capacityLeft = HTTP_CAPACITY;
-            break;
         case RestrictionType::Intensive:
             capacityLeft = INTENSIVE_CAPACITY;
             break;

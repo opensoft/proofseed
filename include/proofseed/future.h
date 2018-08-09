@@ -1,18 +1,22 @@
 #ifndef PROOF_FUTURE_H
 #define PROOF_FUTURE_H
 
-#include "proofcore/3rdparty/optional/optional.hpp"
-#include "proofcore/helpers/tuplemaker.h"
-#include "proofcore/proofalgorithms.h"
-#include "proofcore/proofcore_global.h"
-#include "proofcore/spinlock.h"
+#include "proofseed/helpers/tuplemaker.h"
+#include "proofseed/proofalgorithms.h"
+#include "proofseed/proofseed_global.h"
+#include "proofseed/spinlock.h"
+
+#include "3rdparty/optional/optional.hpp"
 
 #include <QCoreApplication>
 #include <QMutex>
+#include <QSharedPointer>
 #include <QString>
 #include <QThread>
 #include <QTime>
+#include <QVariant>
 #include <QWaitCondition>
+#include <QWeakPointer>
 
 #include <list>
 
@@ -76,11 +80,11 @@ struct Zipper<std::true_type, Left, Middle, Right, Tail...>
     using type = typename Zipper<std::true_type, typename Zipper<std::true_type, Left, Middle>::type, Right, Tail...>::type;
 };
 
-bool PROOF_CORE_EXPORT hasLastFailure();
-Failure PROOF_CORE_EXPORT lastFailure();
-void PROOF_CORE_EXPORT resetLastFailure();
-void PROOF_CORE_EXPORT setLastFailure(Failure &&failure);
-void PROOF_CORE_EXPORT setLastFailure(const Failure &failure);
+bool PROOF_SEED_EXPORT hasLastFailure();
+Failure PROOF_SEED_EXPORT lastFailure();
+void PROOF_SEED_EXPORT resetLastFailure();
+void PROOF_SEED_EXPORT setLastFailure(Failure &&failure);
+void PROOF_SEED_EXPORT setLastFailure(const Failure &failure);
 } // namespace detail
 } // namespace futures
 

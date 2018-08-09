@@ -1,12 +1,14 @@
 #ifndef PROOF_TASKS_H
 #define PROOF_TASKS_H
 
-#include "proofcore/3rdparty/optional/optional.hpp"
-#include "proofcore/future.h"
-#include "proofcore/proofalgorithms.h"
-#include "proofcore/proofcore_global.h"
+#include "proofseed/future.h"
+#include "proofseed/proofalgorithms.h"
+#include "proofseed/proofseed_global.h"
+
+#include "3rdparty/optional/optional.hpp"
 
 #include <QEventLoop>
+#include <QVector>
 
 #include <cmath>
 #include <type_traits>
@@ -18,13 +20,12 @@ enum class RestrictionType
 {
     Custom,
     Intensive,
-    Http, //Deprecated, will be removed soon
     ThreadBound
 };
 
 class TasksDispatcherPrivate;
 class Worker;
-class PROOF_CORE_EXPORT TasksDispatcher
+class PROOF_SEED_EXPORT TasksDispatcher
 {
     Q_DECLARE_PRIVATE(TasksDispatcher)
 public:
@@ -110,8 +111,6 @@ public:
                 };
                 *connection = QObject::connect(sender, signal, eventLoop.data(), slot, Qt::QueuedConnection);
             };
-        qCDebug(proofCoreTasksExtraLog) << "Thread" << QThread::currentThread()
-                                        << ": signal waiter added, sender:" << sender << "signal:" << &signal;
         addSignalWaiterPrivate(std::move(connector));
     }
 

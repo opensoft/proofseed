@@ -1,13 +1,13 @@
 #ifndef PROOF_SPINLOCK_H
 #define PROOF_SPINLOCK_H
 
-#include "proofcore/proofcore_global.h"
+#include "proofseed/proofseed_global.h"
 
 #include <atomic>
 
 namespace Proof {
 
-class PROOF_CORE_EXPORT SpinLock
+class PROOF_SEED_EXPORT SpinLock
 {
 public:
     SpinLock();

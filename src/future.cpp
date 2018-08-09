@@ -1,4 +1,4 @@
-#include "proofcore/future.h"
+#include "proofseed/future.h"
 
 namespace Proof {
 namespace futures {
