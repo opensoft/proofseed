@@ -18,7 +18,7 @@ Who needs boring description at the beginning of the README file when we can tak
 FutureSP<double> width = /*...*/;
 FutureSP<double> height = /*...*/;
 width->wait();
-height->weight();
+height->wait();
 auto area = width->result() * height->result();
 ```
 
