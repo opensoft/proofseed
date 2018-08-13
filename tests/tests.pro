@@ -25,7 +25,7 @@ SOURCES += \
 PROOF_PATH = $$(PROOF_PATH)
 !isEmpty(PROOF_PATH) {
     # Part of Proof
-    message(Building proofseed as part of Proof framework)
+    message(Building proofseed tests as part of Proof framework)
     DESTDIR = $$PROOF_PATH/tests
     INCLUDEPATH += $$PROOF_PATH/include
     LIBS += -L$$PROOF_PATH/lib

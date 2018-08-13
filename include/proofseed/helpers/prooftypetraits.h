@@ -26,6 +26,7 @@
  */
 #ifndef PROOFTYPETRAITS_H
 #define PROOFTYPETRAITS_H
+#include <tuple>
 #include <type_traits>
 
 namespace Proof {
@@ -69,6 +70,30 @@ template <template <typename...> class Wrapper, template <typename...> class Wra
 struct IsSpecialization<Wrapper<Wrapper2<Args...>>, Wrapper, Wrapper2, Others...>
     : IsSpecialization<Wrapper2<Args...>, Wrapper2, Others...>
 {};
+
+template <typename T, int... forkSolvers>
+struct NestingLevel
+{
+    static constexpr int value = 0;
+};
+
+template <template <typename...> class Wrapper, typename FirstArg, typename... Args>
+struct NestingLevel<Wrapper<FirstArg, Args...>>
+{
+    static constexpr int value = 1 + NestingLevel<FirstArg>::value;
+};
+
+template <template <typename...> class Wrapper, typename... Args, int forkSolver, int... forkSolvers>
+struct NestingLevel<Wrapper<Args...>, forkSolver, forkSolvers...>
+{
+private:
+    static constexpr int position = forkSolver >= sizeof...(Args) ? 1 : forkSolver;
+    using ForkSolution = typename std::tuple_element<position, std::tuple<Args...>>::type;
+
+public:
+    static constexpr int value = 1 + NestingLevel<ForkSolution, forkSolvers...>::value;
+};
+
 } // namespace Proof
 
 #endif // PROOFTYPETRAITS_H

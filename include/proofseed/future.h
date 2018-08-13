@@ -409,6 +409,18 @@ public:
         return map([f = std::forward<Func>(f)](const T &v) { return algorithms::filter(v, f); });
     }
 
+    template <typename Result>
+    auto innerFlatten(Result acc) -> decltype(algorithms::flatten(T(), acc), FutureSP<Result>())
+    {
+        return map([acc = std::move(acc)](const T &v) { return algorithms::flatten(v, std::move(acc)); });
+    }
+
+    template <typename Dummy = void, typename = std::enable_if_t<NestingLevel<T>::value >= 2, Dummy>>
+    auto innerFlatten()
+    {
+        return map([](const T &v) { return algorithms::flatten(v); });
+    }
+
     template <typename Func>
     auto recover(Func &&f) -> decltype(f(Failure()), FutureSP<T>())
     {
