@@ -28,6 +28,11 @@ SOURCES += \
     src/spinlock.cpp \
     src/tasks.cpp
 
+DISTFILES += \
+    CHANGELOG.md \
+    UPGRADE.md \
+    README.md
+
 PROOF_PATH = $$(PROOF_PATH)
 isEmpty(PROOF_PATH) {
     # Standalone

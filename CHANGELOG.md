@@ -3,7 +3,8 @@ ProofSeed Changelog
 
 ## Not Released
 #### Features
- * --
+ * `Future::innerFlatten()` added
+ * trait `NestingLevel` added
 
 #### Bug Fixing
  * --
