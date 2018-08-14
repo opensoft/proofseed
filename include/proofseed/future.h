@@ -363,15 +363,7 @@ public:
     template <typename Func>
     auto andThen(Func &&f) -> decltype(FutureSP<decltype(f()->result())>())
     {
-        using U = decltype(f()->result());
-        FutureSP<U> result = Future<U>::create();
-        onSuccess([result, f = std::forward<Func>(f)](const T &) {
-            FutureSP<U> inner = f();
-            inner->onSuccess([result](const U &v) { result->fillSuccess(v); });
-            inner->onFailure([result](const Failure &failure) { result->fillFailure(failure); });
-        });
-        onFailure([result](const Failure &failure) { result->fillFailure(failure); });
-        return result;
+        return flatMap([f = std::forward<Func>(f)](const T &) { return f(); });
     }
 
     template <typename T2, typename Result = typename std::decay<T2>::type>
@@ -383,54 +375,38 @@ public:
     template <typename Func, typename Result>
     auto innerReduce(Func &&f, Result acc) -> decltype(algorithms::reduce(T(), f, acc), FutureSP<Result>())
     {
-        FutureSP<Result> result = Future<Result>::create();
-        onSuccess([result, f = std::forward<Func>(f), acc = std::move(acc)](const T &v) {
-            result->fillSuccess(algorithms::reduce(v, f, std::move(acc)));
+        return map([f = std::forward<Func>(f), acc = std::move(acc)](const T &v) {
+            return algorithms::reduce(v, f, std::move(acc));
         });
-        onFailure([result](const Failure &failure) { result->fillFailure(failure); });
-        return result;
     }
 
     template <typename Func, typename Result>
     auto innerReduceByMutation(Func &&f, Result acc)
         -> decltype(algorithms::reduceByMutation(T(), f, acc), FutureSP<Result>())
     {
-        FutureSP<Result> result = Future<Result>::create();
-        onSuccess([result, f = std::forward<Func>(f), acc = std::move(acc)](const T &v) {
-            result->fillSuccess(algorithms::reduceByMutation(v, f, std::move(acc)));
+        return map([f = std::forward<Func>(f), acc = std::move(acc)](const T &v) {
+            return algorithms::reduceByMutation(v, f, std::move(acc));
         });
-        onFailure([result](const Failure &failure) { result->fillFailure(failure); });
-        return result;
     }
 
     template <typename Func, typename Result>
     auto innerMap(Func &&f, Result dest) -> decltype(algorithms::map(T(), f, dest), FutureSP<Result>())
     {
-        FutureSP<Result> result = Future<Result>::create();
-        onSuccess([result, f = std::forward<Func>(f), dest = std::move(dest)](const T &v) {
-            result->fillSuccess(algorithms::map(v, f, std::move(dest)));
+        return map([f = std::forward<Func>(f), dest = std::move(dest)](const T &v) {
+            return algorithms::map(v, f, std::move(dest));
         });
-        onFailure([result](const Failure &failure) { result->fillFailure(failure); });
-        return result;
     }
 
     template <typename Func>
     auto innerMap(Func &&f) -> decltype(algorithms::map(T(), f), FutureSP<decltype(algorithms::map(T(), f))>())
     {
-        using Result = decltype(algorithms::map(T(), f));
-        FutureSP<Result> result = Future<Result>::create();
-        onSuccess([result, f = std::forward<Func>(f)](const T &v) { result->fillSuccess(algorithms::map(v, f)); });
-        onFailure([result](const Failure &failure) { result->fillFailure(failure); });
-        return result;
+        return map([f = std::forward<Func>(f)](const T &v) { return algorithms::map(v, f); });
     }
 
     template <typename Func>
     auto innerFilter(Func &&f) -> decltype(algorithms::filter(T(), f), FutureSP<T>())
     {
-        FutureSP<T> result = Future<T>::create();
-        onSuccess([result, f = std::forward<Func>(f)](const T &v) { result->fillSuccess(algorithms::filter(v, f)); });
-        onFailure([result](const Failure &failure) { result->fillFailure(failure); });
-        return result;
+        return map([f = std::forward<Func>(f)](const T &v) { return algorithms::filter(v, f); });
     }
 
     template <typename Func>
