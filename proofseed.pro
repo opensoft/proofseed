@@ -24,9 +24,9 @@ HEADERS += \
     include/proofseed/helpers/tuplemaker.h
 
 SOURCES += \
-    src/future.cpp \
-    src/spinlock.cpp \
-    src/tasks.cpp
+    src/proofseed/future.cpp \
+    src/proofseed/spinlock.cpp \
+    src/proofseed/tasks.cpp
 
 DISTFILES += \
     CHANGELOG.md \
