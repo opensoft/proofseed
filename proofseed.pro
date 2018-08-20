@@ -34,7 +34,18 @@ DISTFILES += \
     README.md
 
 PROOF_PATH = $$(PROOF_PATH)
-isEmpty(PROOF_PATH) {
+PROOF_PRI_PATH=
+exists($$PWD/../proofboot/proof.pri) {
+    PROOF_PRI_PATH = $$PWD/../proofboot/proof.pri
+} else:!isEmpty(PROOF_PATH) {
+    PROOF_PRI_PATH = $$PROOF_PATH/proof.pri
+}
+!isEmpty(PROOF_PRI_PATH) {
+    # Part of Proof
+    message(Building proofseed as part of Proof framework)
+    include($$PROOF_PRI_PATH)
+    DESTDIR = $$BUILDPATH/lib
+} else {
     # Standalone
     message(Building proofseed as standalone library)
     target.path = $$PREFIX/lib/
@@ -45,10 +56,5 @@ isEmpty(PROOF_PATH) {
     3rdparty_optional_headers.path = $$PREFIX/include/3rdparty/optional/
     3rdparty_optional_headers.files = 3rdparty/optional/*.hpp
     INSTALLS += target headers helpers_headers 3rdparty_optional_headers
-} else {
-    # Part of Proof
-    message(Building proofseed as part of Proof framework)
-    include($$PROOF_PATH/proof.pri)
-    DESTDIR = $$BUILDPATH/lib
 }
 

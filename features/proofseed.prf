@@ -1,0 +1,7 @@
+include(proof_common.prf)
+
+QT *= core
+
+LIBS *= -lProofSeed
+
+android:ANDROID_EXTRA_LIBS *= $$(PROOF_PATH)/lib/libProofSeed.so

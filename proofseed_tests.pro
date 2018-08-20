@@ -21,7 +21,6 @@ SOURCES += \
     tests/proofseed/algorithms_map_test.cpp \
     tests/proofseed/algorithms_flatten_test.cpp
 
-
 PROOF_PATH = $$(PROOF_PATH)
 !isEmpty(PROOF_PATH) {
     # Part of Proof
