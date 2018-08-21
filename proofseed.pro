@@ -33,17 +33,13 @@ DISTFILES += \
     UPGRADE.md \
     README.md
 
-PROOF_PATH = $$(PROOF_PATH)
-PROOF_PRI_PATH=
-exists($$PWD/../proofboot/proof.pri) {
-    PROOF_PRI_PATH = $$PWD/../proofboot/proof.pri
-} else:!isEmpty(PROOF_PATH) {
-    PROOF_PRI_PATH = $$PROOF_PATH/proof.pri
-}
+PROOF_PRI_PATH = $$PWD/../proofboot
+!exists($$PROOF_PRI_PATH/proof.pri):PROOF_PRI_PATH = $$(PROOF_PATH)
+!exists($$PROOF_PRI_PATH/proof.pri):PROOF_PRI_PATH=
 !isEmpty(PROOF_PRI_PATH) {
     # Part of Proof
     message(Building proofseed as part of Proof framework)
-    include($$PROOF_PRI_PATH)
+    include($$PROOF_PRI_PATH/proof.pri)
     DESTDIR = $$BUILDPATH/lib
 } else {
     # Standalone

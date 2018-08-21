@@ -1,0 +1,106 @@
+sudo: required
+dist: trusty
+language: cpp
+services:
+  - docker
+
+cache:
+  directories:
+    - $HOME/builder_ccache
+    - $HOME/full_build
+    - $HOME/proof-bin
+
+env:
+  global:
+    - TARGET_NAME=`echo "$TRAVIS_REPO_SLUG" | sed -r 's|(.*/)?(.+)|\2|'`
+    - PATH=$HOME/.local/bin:$PATH
+    - secure: "nh3+cjD52qd9DHD15rr3oBtEw6v5zWnUefrUtY06ipr4KKnI/DyjVc/9zGu38odCIjTNKWDWPCJF2rJqprHvZeYEmq+UQCFPG5mL51nGW2r9ATMr9PPZg0M/jUwR9UXp3KgphC852g7r843b1XUMC+gSljuKlUQzuzMpoSfxa2DjGt2MsE40MEhrLe1GKRo/HsvN0FTpJpfkXVaLjU4MhNeFTzoHvIHXKGvDg+6FgDw/nfTih4zvm46KaFF6+o7JxZX8xNnawfV6kNRZt5AvtDYv44YZIgw+GarrYSIOBKuP02VNF5q71qWMEEdd9QKJotMSIw1StHc/TN2hf510dQcnKbJ3uDaIBYbXnY5R8l+hdgszN7fT1c0RsLoe2v6X7J2SsXt/KWRLNWZ6b3Q/lSdhgJ8FM4cV2HG9Eo7/w3eSjgoLvs4+SrpgNqUbZAc9Gy4gysQDVrhBq/TCggw1JgwIJu755YaG3esowAfnKNqyDl5eV5S28ws+q0s1WC75AAZ9sD+pJJXFikoUsrhpq7RAC8UGRamGGliTc10wnw0lvuxsol9VtDHI6e5e2iac0/4dqdO3DWR0t7/pNHaL+ivmMrXvAv0FT+50i7C4JvGoVDEaxbQn0xix491V4kKO7Bi3pzOnhbYxwuy1kCwKCUy4jeo3oOuzPYBlDtf2HSY="
+    - secure: "aUGl1GvbDzS1N/+ZAHtxEHlskogSV0hKkHOhUI4XtLzsT/WHNH0MvqvGm9QmOtd34+hP1eas6XWZdnFWQ4mCX7OC420GQE7LU+iqnr9E5VeyraHTuzb65VgKhAcYH/Xgf+u4rg7PnW55dbdRzMwI3V5JThzX6goVG7X3WHOlUOBarU5iZ/qOCnBwTBoI+aOr3c7gENdWN4ap7zZjY+P7Bdl+fkE9ZXZguXvSQRFOrr9rDvbZAv8t86otBKeb69outqd+UY237ZBQzp6pq/hZoGs16s8dpBjgZ3h7zVKGTcKOIJwdXOegb8YmyCwIZVJgxyrZ3UxXY/F84tusiSlUS5Y1DCzw4PwhlWmTyZ5M/vkkBdeLm4N+vj2MwoUTSWDhROhsS3NQgfboecooAO/uAIJOlTpyJe43nAlilwM4zrJ7skYjeDryHa9VNQwSrS4JVdRbaNmGWMIOPZJOqSPm5N5kd+jFWvYfMs+2uhiWmcvnHIsXPvXbzTwGYG+3JDovuwAQKy4cg+HFDSf6XL3ydjkMUjvld2Xv8F81f6fhDf9CBL/vh7CbjbbGTAlljwj1jzMOJQRST9MQug7h+2wb01Lq4jHs7hjhs20yjMSN3sefPfecAuzVZInWVx6RzTHc7398HqLa8rC5jZXg0N5YBpLRGTPFO8eb3nVk8ehyIMU="
+
+before_install: export -f travis_fold && export -f travis_time_start && export -f travis_time_finish && export -f travis_nanoseconds
+script: echo "Nothing to do"
+
+jobs:
+  include:
+    - &proof-boot
+      stage: Proof boot
+      name: Linux proofboot downloading
+      if: type != pull_request AND tag IS blank AND branch != master
+      before_script: pip install --user awscli
+      script:
+        - aws s3 cp s3://proof.travis.builds/$TRAVIS_BRANCH/raw-bin/proofboot-bin-debian9.tar.gz $HOME/proof-bin.tar.gz ||
+          aws s3 cp s3://proof.travis.builds/develop/raw-bin/proofboot-bin-debian9.tar.gz $HOME/proof-bin.tar.gz || travis_terminate 1
+        - cd $HOME && sudo rm -rf proof-bin && tar -xzf proof-bin.tar.gz
+    - <<: *proof-boot
+      name: Android proofboot downloading
+      if: type != pull_request AND tag IS blank AND branch != master
+      language: android
+      android:
+        components:
+          - build-tools-25.0.2
+      env: DUMMY=android
+      before_script: pip install --user awscli
+      script:
+        - aws s3 cp s3://proof.travis.builds/$TRAVIS_BRANCH/raw-bin/proofboot-bin-android.tar.gz $HOME/proof-bin.tar.gz ||
+          aws s3 cp s3://proof.travis.builds/develop/raw-bin/proofboot-bin-android.tar.gz $HOME/proof-bin.tar.gz || travis_terminate 1
+        - cd $HOME && sudo rm -rf proof-bin && tar -xzf proof-bin.tar.gz
+
+    - &pre-compile
+      stage: Proof dependencies
+      name: Linux proof modules downloading
+      if: type != pull_request AND tag IS blank AND branch != master
+      script: $HOME/proof-bin/travis/proof-modules/pre-compile/raw-bin_download.sh debian9 proof-gtest
+    - <<: *pre-compile
+      name: Android proof modules downloading
+      language: android
+      android:
+        components:
+          - build-tools-25.0.2
+      env: DUMMY=android
+      if: type != pull_request AND tag IS blank AND branch != master
+      script: $HOME/proof-bin/travis/proof-modules/pre-compile/raw-bin_download.sh android proof-gtest
+
+    - &compile
+      stage: compilation and static checks
+      name: Compilation (Debian9/clang/ccache)
+      if: tag IS blank AND branch != master
+      script: $HOME/proof-bin/travis/proof-modules/compile/linux_compile.sh
+    - <<: *compile
+      name: Code style check with clang-format
+      script: $HOME/proof-bin/travis/proof-modules/compile/clang-format_check.sh
+    - <<: *compile
+      name: Static code analysis with clazy
+      script: $HOME/proof-bin/travis/proof-modules/compile/clazy_check.sh
+    - <<: *compile
+      name: Compilation (Android27/gcc/ccache)
+      language: android
+      android:
+        components:
+          - tools
+          - platform-tools
+          - tools
+          - build-tools-27.0.3
+          - android-27
+      env: DUMMY=android
+      if: tag IS blank AND branch != master
+      script: $HOME/proof-bin/travis/proof-modules/compile/android_compile.sh
+
+    - &unit-tests
+      stage: unit tests
+      name: tests/ProofSeed
+      script: $HOME/proof-bin/travis/proof-modules/unit-tests/run_tests.sh seed
+
+    - &post-compile
+      stage: Post compilation
+      name: Raw linux binary upload to S3
+      if: type != pull_request AND tag IS blank AND branch != master
+      script: $HOME/proof-bin/travis/proof-modules/post-compile/raw-bin_upload.sh debian9
+    - <<: *post-compile
+      name: Raw android binary upload to S3
+      language: android
+      android:
+        components:
+          - build-tools-25.0.2
+      env: DUMMY=android
+      if: type != pull_request AND tag IS blank AND branch != master
+      script: $HOME/proof-bin/travis/proof-modules/post-compile/raw-bin_upload.sh android
