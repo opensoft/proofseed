@@ -103,7 +103,6 @@ protected:
 private:
     qint32 id = 0;
     std::atomic_bool poisoned{false};
-    std::atomic_bool asleep{false};
     std::experimental::optional<TaskInfo> nextTask;
     QWaitCondition waiter;
     QMutex taskLock;
@@ -124,6 +123,16 @@ TasksDispatcher::~TasksDispatcher()
     d_ptr->mainLock.lock();
     for (auto worker : d_ptr->workers)
         worker->poisonPill();
+    for (auto worker : d_ptr->workers)
+        worker->wait(100);
+    for (auto worker : d_ptr->workers) {
+        if (worker->isRunning()) {
+            worker->terminate();
+            worker->wait(100);
+        }
+        delete worker;
+    }
+    d_ptr->workers.clear();
     d_ptr->mainLock.unlock();
 }
 
@@ -323,14 +332,14 @@ void Worker::setNextTask(const TaskInfo &task)
 {
     taskLock.lock();
     nextTask = task;
-    if (asleep)
-        waiter.wakeAll();
+    waiter.wakeAll();
     taskLock.unlock();
 }
 
 void Worker::poisonPill()
 {
     poisoned = true;
+    waiter.wakeAll();
 }
 
 void Worker::run()
@@ -338,8 +347,11 @@ void Worker::run()
     while (!poisoned) {
         taskLock.lock();
         if (!nextTask.has_value()) {
-            asleep = true;
             waiter.wait(&taskLock);
+            if (poisoned) {
+                taskLock.unlock();
+                break;
+            }
         }
         TaskInfo task = nextTask.value();
         nextTask.reset();
@@ -348,7 +360,6 @@ void Worker::run()
         TasksDispatcher::instance()->d_ptr->taskFinished(id, task);
         QThread::yieldCurrentThread();
     }
-    delete this;
 }
 
 #include "tasks.moc"
