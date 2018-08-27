@@ -7,7 +7,7 @@ ProofSeed Changelog
  * trait `NestingLevel` added
 
 #### Bug Fixing
- * --
+ * Fix for possible crash on tasks scheduler destruction
 
 ## 0.18.8.10
 #### Features
