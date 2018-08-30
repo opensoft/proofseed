@@ -38,12 +38,12 @@ PROOF_PRI_PATH = $$PWD/../proofboot
 !exists($$PROOF_PRI_PATH/proof.pri):PROOF_PRI_PATH=
 !isEmpty(PROOF_PRI_PATH) {
     # Part of Proof
-    message(Building proofseed as part of Proof framework)
+    !build_pass:log(Building proofseed as part of Proof framework $$escape_expand(\\n))
     include($$PROOF_PRI_PATH/proof.pri)
     DESTDIR = $$BUILDPATH/lib
 } else {
     # Standalone
-    message(Building proofseed as standalone library)
+    !build_pass:log(Building proofseed as standalone library $$escape_expand(\\n))
     target.path = $$PREFIX/lib/
     headers.path = $$PREFIX/include/proofseed/
     headers.files = include/proofseed/*.h
