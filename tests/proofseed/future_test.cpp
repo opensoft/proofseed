@@ -652,6 +652,38 @@ TEST(FutureTest, innerFilter)
         EXPECT_EQ(i * 2 + 1, result[i]);
 }
 
+TEST(FutureTest, innerFlatten)
+{
+    PromiseSP<QVector<QVector<int>>> promise = PromiseSP<QVector<QVector<int>>>::create();
+    FutureSP<QVector<QVector<int>>> future = promise->future();
+    FutureSP<QVector<int>> flattenedFuture = future->innerFlatten(QVector<int>());
+    EXPECT_FALSE(flattenedFuture->completed());
+    promise->success({{1, 2}, {3}, {4, 5}});
+    ASSERT_TRUE(flattenedFuture->completed());
+    EXPECT_TRUE(flattenedFuture->succeeded());
+    EXPECT_FALSE(flattenedFuture->failed());
+    QVector<int> result = flattenedFuture->result();
+    ASSERT_EQ(5, result.count());
+    for (int i = 0; i < 5; ++i)
+        EXPECT_EQ(i + 1, result[i]);
+}
+
+TEST(FutureTest, innerFlattenShort)
+{
+    PromiseSP<QVector<QVector<int>>> promise = PromiseSP<QVector<QVector<int>>>::create();
+    FutureSP<QVector<QVector<int>>> future = promise->future();
+    FutureSP<QVector<int>> flattenedFuture = future->innerFlatten();
+    EXPECT_FALSE(flattenedFuture->completed());
+    promise->success({{1, 2}, {3}, {4, 5}});
+    ASSERT_TRUE(flattenedFuture->completed());
+    EXPECT_TRUE(flattenedFuture->succeeded());
+    EXPECT_FALSE(flattenedFuture->failed());
+    QVector<int> result = flattenedFuture->result();
+    ASSERT_EQ(5, result.count());
+    for (int i = 0; i < 5; ++i)
+        EXPECT_EQ(i + 1, result[i]);
+}
+
 TEST(FutureTest, sequenceQVector)
 {
     int n = 5;

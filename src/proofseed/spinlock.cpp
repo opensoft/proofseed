@@ -21,18 +21,36 @@
  * IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
  * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * Author: denis.kormalev@opensoftdev.com (Denis Kormalev)
- *
  */
-#ifndef PROOFSEED_GLOBAL_H
-#define PROOFSEED_GLOBAL_H
+#include "proofseed/spinlock.h"
 
-#include <QtGlobal>
+#include <QThread>
 
-#ifdef PROOF_SEED_LIB
-#    define PROOF_SEED_EXPORT Q_DECL_EXPORT
-#else
-#    define PROOF_SEED_EXPORT Q_DECL_IMPORT
-#endif
+static constexpr unsigned long SLEEP_MSECS = 1;
+static constexpr size_t ITERATIONS_COUNT = 64;
 
-#endif // PROOFSEED_GLOBAL_H
+namespace Proof {
+
+SpinLock::SpinLock()
+{}
+
+void SpinLock::lock()
+{
+    while (!tryLock())
+        QThread::msleep(SLEEP_MSECS);
+}
+
+bool SpinLock::tryLock()
+{
+    bool result = false;
+    for (size_t i = 0; !result && i < ITERATIONS_COUNT; ++i)
+        result = !m_lock.test_and_set(std::memory_order_acquire);
+    return result;
+}
+
+void SpinLock::unlock()
+{
+    m_lock.clear(std::memory_order_release);
+}
+
+} // namespace Proof

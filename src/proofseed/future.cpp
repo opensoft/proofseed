@@ -24,15 +24,37 @@
  * Author: denis.kormalev@opensoftdev.com (Denis Kormalev)
  *
  */
-#ifndef PROOFSEED_GLOBAL_H
-#define PROOFSEED_GLOBAL_H
+#include "proofseed/future.h"
 
-#include <QtGlobal>
+namespace Proof {
+namespace futures {
+namespace detail {
+static thread_local std::experimental::optional<Failure> m_lastFailure;
 
-#ifdef PROOF_SEED_LIB
-#    define PROOF_SEED_EXPORT Q_DECL_EXPORT
-#else
-#    define PROOF_SEED_EXPORT Q_DECL_IMPORT
-#endif
+bool hasLastFailure()
+{
+    return m_lastFailure.has_value();
+}
 
-#endif // PROOFSEED_GLOBAL_H
+Failure lastFailure()
+{
+    return m_lastFailure.value_or(Failure());
+}
+
+void resetLastFailure()
+{
+    m_lastFailure.reset();
+}
+
+void setLastFailure(Proof::Failure &&failure)
+{
+    m_lastFailure = std::move(failure);
+}
+
+void setLastFailure(const Proof::Failure &failure)
+{
+    m_lastFailure = failure;
+}
+} // namespace detail
+} // namespace futures
+} // namespace Proof

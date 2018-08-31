@@ -1,5 +1,5 @@
 TEMPLATE = app
-TARGET = proofseed_tests
+TARGET = seed_tests
 
 CONFIG += c++14 console
 macx:CONFIG -= app_bundle
@@ -11,21 +11,20 @@ LIBS += -lproof-gtest -lProofSeed
 win32:CONFIG *= skip_target_version_ext
 versionAtLeast(QT_VERSION, 5.11.0):!msvc:CONFIG += qtquickcompiler
 
-INCLUDEPATH += ../include ..
+INCLUDEPATH += include .
 
 SOURCES += \
-    main.cpp \
-    algorithms_test.cpp \
-    future_test.cpp \
-    tasks_test.cpp \
-    algorithms_map_test.cpp \
-    algorithms_flatten_test.cpp
-
+    tests/proofseed/main.cpp \
+    tests/proofseed/algorithms_test.cpp \
+    tests/proofseed/future_test.cpp \
+    tests/proofseed/tasks_test.cpp \
+    tests/proofseed/algorithms_map_test.cpp \
+    tests/proofseed/algorithms_flatten_test.cpp
 
 PROOF_PATH = $$(PROOF_PATH)
 !isEmpty(PROOF_PATH) {
     # Part of Proof
-    message(Building proofseed as part of Proof framework)
+    !build_pass:log(Building proofseed tests as part of Proof framework $$escape_expand(\\n))
     DESTDIR = $$PROOF_PATH/tests
     INCLUDEPATH += $$PROOF_PATH/include
     LIBS += -L$$PROOF_PATH/lib

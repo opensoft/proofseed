@@ -24,14 +24,26 @@ HEADERS += \
     include/proofseed/helpers/tuplemaker.h
 
 SOURCES += \
-    src/future.cpp \
-    src/spinlock.cpp \
-    src/tasks.cpp
+    src/proofseed/future.cpp \
+    src/proofseed/spinlock.cpp \
+    src/proofseed/tasks.cpp
 
-PROOF_PATH = $$(PROOF_PATH)
-isEmpty(PROOF_PATH) {
+DISTFILES += \
+    CHANGELOG.md \
+    UPGRADE.md \
+    README.md
+
+PROOF_PRI_PATH = $$PWD/../proofboot
+!exists($$PROOF_PRI_PATH/proof.pri):PROOF_PRI_PATH = $$(PROOF_PATH)
+!exists($$PROOF_PRI_PATH/proof.pri):PROOF_PRI_PATH=
+!isEmpty(PROOF_PRI_PATH) {
+    # Part of Proof
+    !build_pass:log(Building proofseed as part of Proof framework $$escape_expand(\\n))
+    include($$PROOF_PRI_PATH/proof.pri)
+    DESTDIR = $$BUILDPATH/lib
+} else {
     # Standalone
-    message(Building proofseed as standalone library)
+    !build_pass:log(Building proofseed as standalone library $$escape_expand(\\n))
     target.path = $$PREFIX/lib/
     headers.path = $$PREFIX/include/proofseed/
     headers.files = include/proofseed/*.h
@@ -40,10 +52,5 @@ isEmpty(PROOF_PATH) {
     3rdparty_optional_headers.path = $$PREFIX/include/3rdparty/optional/
     3rdparty_optional_headers.files = 3rdparty/optional/*.hpp
     INSTALLS += target headers helpers_headers 3rdparty_optional_headers
-} else {
-    # Part of Proof
-    message(Building proofseed as part of Proof framework)
-    include($$PROOF_PATH/proof.pri)
-    DESTDIR = $$BUILDPATH/lib
 }
 

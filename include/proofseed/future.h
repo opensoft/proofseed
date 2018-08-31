@@ -1,3 +1,29 @@
+/* Copyright 2018, OpenSoft Inc.
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without modification, are permitted
+ * provided that the following conditions are met:
+ *
+ *     * Redistributions of source code must retain the above copyright notice, this list of
+ * conditions and the following disclaimer.
+ *    * Redistributions in binary form must reproduce the above copyright notice, this list of
+ * conditions and the following disclaimer in the documentation and/or other materials provided
+ * with the distribution.
+ *     * Neither the name of OpenSoft Inc. nor the names of its contributors may be used to endorse
+ * or promote products derived from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR
+ * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND
+ * FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+ * IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
+ * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Author: denis.kormalev@opensoftdev.com (Denis Kormalev)
+ *
+ */
 #ifndef PROOF_FUTURE_H
 #define PROOF_FUTURE_H
 
@@ -337,15 +363,7 @@ public:
     template <typename Func>
     auto andThen(Func &&f) -> decltype(FutureSP<decltype(f()->result())>())
     {
-        using U = decltype(f()->result());
-        FutureSP<U> result = Future<U>::create();
-        onSuccess([result, f = std::forward<Func>(f)](const T &) {
-            FutureSP<U> inner = f();
-            inner->onSuccess([result](const U &v) { result->fillSuccess(v); });
-            inner->onFailure([result](const Failure &failure) { result->fillFailure(failure); });
-        });
-        onFailure([result](const Failure &failure) { result->fillFailure(failure); });
-        return result;
+        return flatMap([f = std::forward<Func>(f)](const T &) { return f(); });
     }
 
     template <typename T2, typename Result = typename std::decay<T2>::type>
@@ -357,54 +375,50 @@ public:
     template <typename Func, typename Result>
     auto innerReduce(Func &&f, Result acc) -> decltype(algorithms::reduce(T(), f, acc), FutureSP<Result>())
     {
-        FutureSP<Result> result = Future<Result>::create();
-        onSuccess([result, f = std::forward<Func>(f), acc = std::move(acc)](const T &v) {
-            result->fillSuccess(algorithms::reduce(v, f, std::move(acc)));
+        return map([f = std::forward<Func>(f), acc = std::move(acc)](const T &v) {
+            return algorithms::reduce(v, f, std::move(acc));
         });
-        onFailure([result](const Failure &failure) { result->fillFailure(failure); });
-        return result;
     }
 
     template <typename Func, typename Result>
     auto innerReduceByMutation(Func &&f, Result acc)
         -> decltype(algorithms::reduceByMutation(T(), f, acc), FutureSP<Result>())
     {
-        FutureSP<Result> result = Future<Result>::create();
-        onSuccess([result, f = std::forward<Func>(f), acc = std::move(acc)](const T &v) {
-            result->fillSuccess(algorithms::reduceByMutation(v, f, std::move(acc)));
+        return map([f = std::forward<Func>(f), acc = std::move(acc)](const T &v) {
+            return algorithms::reduceByMutation(v, f, std::move(acc));
         });
-        onFailure([result](const Failure &failure) { result->fillFailure(failure); });
-        return result;
     }
 
     template <typename Func, typename Result>
     auto innerMap(Func &&f, Result dest) -> decltype(algorithms::map(T(), f, dest), FutureSP<Result>())
     {
-        FutureSP<Result> result = Future<Result>::create();
-        onSuccess([result, f = std::forward<Func>(f), dest = std::move(dest)](const T &v) {
-            result->fillSuccess(algorithms::map(v, f, std::move(dest)));
+        return map([f = std::forward<Func>(f), dest = std::move(dest)](const T &v) {
+            return algorithms::map(v, f, std::move(dest));
         });
-        onFailure([result](const Failure &failure) { result->fillFailure(failure); });
-        return result;
     }
 
     template <typename Func>
     auto innerMap(Func &&f) -> decltype(algorithms::map(T(), f), FutureSP<decltype(algorithms::map(T(), f))>())
     {
-        using Result = decltype(algorithms::map(T(), f));
-        FutureSP<Result> result = Future<Result>::create();
-        onSuccess([result, f = std::forward<Func>(f)](const T &v) { result->fillSuccess(algorithms::map(v, f)); });
-        onFailure([result](const Failure &failure) { result->fillFailure(failure); });
-        return result;
+        return map([f = std::forward<Func>(f)](const T &v) { return algorithms::map(v, f); });
     }
 
     template <typename Func>
     auto innerFilter(Func &&f) -> decltype(algorithms::filter(T(), f), FutureSP<T>())
     {
-        FutureSP<T> result = Future<T>::create();
-        onSuccess([result, f = std::forward<Func>(f)](const T &v) { result->fillSuccess(algorithms::filter(v, f)); });
-        onFailure([result](const Failure &failure) { result->fillFailure(failure); });
-        return result;
+        return map([f = std::forward<Func>(f)](const T &v) { return algorithms::filter(v, f); });
+    }
+
+    template <typename Result>
+    auto innerFlatten(Result acc) -> decltype(algorithms::flatten(T(), acc), FutureSP<Result>())
+    {
+        return map([acc = std::move(acc)](const T &v) { return algorithms::flatten(v, std::move(acc)); });
+    }
+
+    template <typename Dummy = void, typename = std::enable_if_t<NestingLevel<T>::value >= 2, Dummy>>
+    auto innerFlatten()
+    {
+        return map([](const T &v) { return algorithms::flatten(v); });
     }
 
     template <typename Func>

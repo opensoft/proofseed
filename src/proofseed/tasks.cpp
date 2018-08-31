@@ -1,3 +1,29 @@
+/* Copyright 2018, OpenSoft Inc.
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without modification, are permitted
+ * provided that the following conditions are met:
+ *
+ *     * Redistributions of source code must retain the above copyright notice, this list of
+ * conditions and the following disclaimer.
+ *    * Redistributions in binary form must reproduce the above copyright notice, this list of
+ * conditions and the following disclaimer in the documentation and/or other materials provided
+ * with the distribution.
+ *     * Neither the name of OpenSoft Inc. nor the names of its contributors may be used to endorse
+ * or promote products derived from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR
+ * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND
+ * FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+ * IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
+ * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Author: denis.kormalev@opensoftdev.com (Denis Kormalev)
+ *
+ */
 #include "proofseed/tasks.h"
 
 #include "proofseed/spinlock.h"
@@ -77,7 +103,6 @@ protected:
 private:
     qint32 id = 0;
     std::atomic_bool poisoned{false};
-    std::atomic_bool asleep{false};
     std::experimental::optional<TaskInfo> nextTask;
     QWaitCondition waiter;
     QMutex taskLock;
@@ -98,6 +123,16 @@ TasksDispatcher::~TasksDispatcher()
     d_ptr->mainLock.lock();
     for (auto worker : d_ptr->workers)
         worker->poisonPill();
+    for (auto worker : d_ptr->workers)
+        worker->wait(100);
+    for (auto worker : d_ptr->workers) {
+        if (worker->isRunning()) {
+            worker->terminate();
+            worker->wait(100);
+        }
+        delete worker;
+    }
+    d_ptr->workers.clear();
     d_ptr->mainLock.unlock();
 }
 
@@ -297,14 +332,14 @@ void Worker::setNextTask(const TaskInfo &task)
 {
     taskLock.lock();
     nextTask = task;
-    if (asleep)
-        waiter.wakeAll();
+    waiter.wakeAll();
     taskLock.unlock();
 }
 
 void Worker::poisonPill()
 {
     poisoned = true;
+    waiter.wakeAll();
 }
 
 void Worker::run()
@@ -312,8 +347,11 @@ void Worker::run()
     while (!poisoned) {
         taskLock.lock();
         if (!nextTask.has_value()) {
-            asleep = true;
             waiter.wait(&taskLock);
+            if (poisoned) {
+                taskLock.unlock();
+                break;
+            }
         }
         TaskInfo task = nextTask.value();
         nextTask.reset();
@@ -322,7 +360,6 @@ void Worker::run()
         TasksDispatcher::instance()->d_ptr->taskFinished(id, task);
         QThread::yieldCurrentThread();
     }
-    delete this;
 }
 
 #include "tasks.moc"
