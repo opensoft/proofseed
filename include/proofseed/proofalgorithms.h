@@ -32,6 +32,7 @@
 #include <QPair>
 
 #include <algorithm>
+#include <tuple>
 #include <type_traits>
 
 namespace Proof {
@@ -709,6 +710,14 @@ Container1<Input> flatFilter(const Container1<Container2<Input>> &container, con
 {
     return flatFilter(container, predicate, Container1<Input>());
 }
+
+//extract tuple from tuple
+template <int... I, typename... T>
+constexpr auto sieve(const std::tuple<T...> &arg)
+{
+    return std::make_tuple(std::get<I>(arg)...);
+}
+
 } // namespace algorithms
 } // namespace Proof
 

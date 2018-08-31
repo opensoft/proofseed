@@ -5,6 +5,7 @@ ProofSeed Changelog
 #### Features
  * `Future::innerFlatten()` added
  * trait `NestingLevel` added
+ * `sieve` method added for "sieving" tuple and keep only specified elements
 
 #### Bug Fixing
  * Fix for possible crash on tasks scheduler destruction
