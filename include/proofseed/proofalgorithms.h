@@ -6,6 +6,7 @@
 #include <QPair>
 
 #include <algorithm>
+#include <tuple>
 #include <type_traits>
 
 namespace Proof {
