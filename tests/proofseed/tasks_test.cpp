@@ -890,3 +890,69 @@ TEST(TasksTest, threadBindingToDifferentKeysAmongOtherTasks)
     for (const auto &r : otherResults)
         r->wait();
 }
+
+TEST(TasksTest, singleTaskException)
+{
+    auto future = run([]() { throw std::runtime_error("Hi"); });
+    future->wait();
+    ASSERT_TRUE(future->completed());
+    EXPECT_FALSE(future->succeeded());
+    EXPECT_TRUE(future->failed());
+    EXPECT_EQ(Failure::FromExceptionHint, future->failureReason().hints);
+    EXPECT_EQ("Exception caught: Hi", future->failureReason().message);
+}
+
+TEST(TasksTest, singleTaskExceptionNonStd)
+{
+    auto future = run([]() { throw 42; });
+    future->wait();
+    ASSERT_TRUE(future->completed());
+    EXPECT_FALSE(future->succeeded());
+    EXPECT_TRUE(future->failed());
+    EXPECT_EQ(Failure::FromExceptionHint, future->failureReason().hints);
+    EXPECT_EQ("Exception caught", future->failureReason().message);
+}
+
+TEST(TasksTest, sequenceRunException)
+{
+    auto future = run(QVector<int>{1, 2, 3}, [](int) { throw std::runtime_error("Hi"); });
+    future->wait();
+    ASSERT_TRUE(future->completed());
+    EXPECT_FALSE(future->succeeded());
+    EXPECT_TRUE(future->failed());
+    EXPECT_EQ(Failure::FromExceptionHint, future->failureReason().hints);
+    EXPECT_EQ("Exception caught: Hi", future->failureReason().message);
+}
+
+TEST(TasksTest, sequenceRunExceptionNonStd)
+{
+    auto future = run(QVector<int>{1, 2, 3}, [](int) { throw 42; });
+    future->wait();
+    ASSERT_TRUE(future->completed());
+    EXPECT_FALSE(future->succeeded());
+    EXPECT_TRUE(future->failed());
+    EXPECT_EQ(Failure::FromExceptionHint, future->failureReason().hints);
+    EXPECT_EQ("Exception caught", future->failureReason().message);
+}
+
+TEST(TasksTest, clusteredRunException)
+{
+    auto future = clusteredRun(QVector<int>{1, 2, 3}, [](int) -> int { throw std::runtime_error("Hi"); });
+    future->wait();
+    ASSERT_TRUE(future->completed());
+    EXPECT_FALSE(future->succeeded());
+    EXPECT_TRUE(future->failed());
+    EXPECT_EQ(Failure::FromExceptionHint, future->failureReason().hints);
+    EXPECT_EQ("Exception caught: Hi", future->failureReason().message);
+}
+
+TEST(TasksTest, clusteredRunExceptionNonStd)
+{
+    auto future = clusteredRun(QVector<int>{1, 2, 3}, [](int) -> int { throw 42; });
+    future->wait();
+    ASSERT_TRUE(future->completed());
+    EXPECT_FALSE(future->succeeded());
+    EXPECT_TRUE(future->failed());
+    EXPECT_EQ(Failure::FromExceptionHint, future->failureReason().hints);
+    EXPECT_EQ("Exception caught", future->failureReason().message);
+}

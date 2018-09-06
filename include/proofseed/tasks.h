@@ -69,14 +69,21 @@ public:
     template <typename Task, typename Result = typename std::result_of_t<Task()>,
               typename = typename std::enable_if_t<!std::is_same<Result, void>::value
                                                    && !IsSpecialization<Result, QSharedPointer, Future>::value>>
-    CancelableFuture<Result> run(Task &&task, RestrictionType restrictionType, const QString &restrictor)
+    CancelableFuture<Result> run(Task &&task, RestrictionType restrictionType, const QString &restrictor) noexcept
     {
         PromiseSP<Result> promise = PromiseSP<Result>::create();
-        std::function<void()> f = [promise, task = std::forward<Task>(task)]() {
+        std::function<void()> f = [promise, task = std::forward<Task>(task)]() noexcept
+        {
             if (promise->filled())
                 return;
             Proof::futures::detail::resetLastFailure();
-            promise->success(task());
+            try {
+                promise->success(task());
+            } catch (const std::exception &e) {
+                promise->failure(Failure::fromException(e));
+            } catch (...) {
+                promise->failure(Failure::fromException());
+            }
         };
         insertTaskInfo(std::move(f), restrictionType, restrictor);
         return CancelableFuture<Result>(promise);
@@ -85,16 +92,23 @@ public:
     template <typename Task, typename Result = typename std::result_of_t<Task()>,
               typename InnerResult = typename Result::Type::Value,
               typename = typename std::enable_if_t<IsSpecialization<Result, QSharedPointer, Future>::value>>
-    CancelableFuture<InnerResult> run(Task &&task, RestrictionType restrictionType, const QString &restrictor)
+    CancelableFuture<InnerResult> run(Task &&task, RestrictionType restrictionType, const QString &restrictor) noexcept
     {
         PromiseSP<InnerResult> promise = PromiseSP<InnerResult>::create();
-        std::function<void()> f = [promise, task = std::forward<Task>(task)]() {
+        std::function<void()> f = [promise, task = std::forward<Task>(task)]() noexcept
+        {
             if (promise->filled())
                 return;
             Proof::futures::detail::resetLastFailure();
-            task()
-                ->onSuccess([promise](const InnerResult &result) { promise->success(result); })
-                ->onFailure([promise](const Failure &failure) { promise->failure(failure); });
+            try {
+                task()
+                    ->onSuccess([promise](const InnerResult &result) noexcept { promise->success(result); })
+                    ->onFailure([promise](const Failure &failure) noexcept { promise->failure(failure); });
+            } catch (const std::exception &e) {
+                promise->failure(Failure::fromException(e));
+            } catch (...) {
+                promise->failure(Failure::fromException());
+            }
         };
         insertTaskInfo(std::move(f), restrictionType, restrictor);
         return CancelableFuture<InnerResult>(promise);
@@ -102,67 +116,77 @@ public:
 
     template <typename Task, typename Result = typename std::result_of_t<Task()>,
               typename = typename std::enable_if_t<std::is_same<Result, void>::value>>
-    CancelableFuture<bool> run(Task &&task, RestrictionType restrictionType, const QString &restrictor)
+    CancelableFuture<bool> run(Task &&task, RestrictionType restrictionType, const QString &restrictor) noexcept
     {
         PromiseSP<bool> promise = PromiseSP<bool>::create();
-        std::function<void()> f = [promise, task = std::forward<Task>(task)]() {
+        std::function<void()> f = [promise, task = std::forward<Task>(task)]() noexcept
+        {
             if (promise->filled())
                 return;
             Proof::futures::detail::resetLastFailure();
-            task();
-            promise->success(true);
+            try {
+                task();
+                promise->success(true);
+            } catch (const std::exception &e) {
+                promise->failure(Failure::fromException(e));
+            } catch (...) {
+                promise->failure(Failure::fromException());
+            }
         };
         insertTaskInfo(std::move(f), restrictionType, restrictor);
         return CancelableFuture<bool>(promise);
     }
 
     template <class SignalSender, class SignalType, class... Args>
-    void addSignalWaiter(SignalSender *sender, SignalType signal, std::function<bool(Args...)> callback)
+    void addSignalWaiter(SignalSender *sender, SignalType signal, std::function<bool(Args...)> callback) noexcept
     {
-        std::function<void(const QSharedPointer<QEventLoop> &)> connector =
-            [sender, signal, callback, this](const QSharedPointer<QEventLoop> &eventLoop) {
-                auto connection = QSharedPointer<QMetaObject::Connection>::create();
-                auto eventLoopWeak = eventLoop.toWeakRef();
-                std::function<void(Args...)> slot = [callback, eventLoopWeak, connection, this](Args... args) {
-                    QSharedPointer<QEventLoop> eventLoop = eventLoopWeak.toStrongRef();
-                    if (!eventLoop)
-                        return;
-                    if (!callback(args...))
-                        return;
-                    QObject::disconnect(*connection);
-                    if (!eventLoopStarted())
-                        clearEventLoop();
-                    else
-                        eventLoop->quit();
-                };
-                *connection = QObject::connect(sender, signal, eventLoop.data(), slot, Qt::QueuedConnection);
+        std::function<void(const QSharedPointer<QEventLoop> &)> connector = [sender, signal, callback, this](
+            const QSharedPointer<QEventLoop> &eventLoop) noexcept
+        {
+            auto connection = QSharedPointer<QMetaObject::Connection>::create();
+            auto eventLoopWeak = eventLoop.toWeakRef();
+            std::function<void(Args...)> slot = [callback, eventLoopWeak, connection, this](Args... args) {
+                QSharedPointer<QEventLoop> eventLoop = eventLoopWeak.toStrongRef();
+                if (!eventLoop)
+                    return;
+                if (!callback(args...))
+                    return;
+                QObject::disconnect(*connection);
+                if (!eventLoopStarted())
+                    clearEventLoop();
+                else
+                    eventLoop->quit();
             };
+            *connection = QObject::connect(sender, signal, eventLoop.data(), slot, Qt::QueuedConnection);
+        };
         addSignalWaiterPrivate(std::move(connector));
     }
 
-    void fireSignalWaiters();
+    void fireSignalWaiters() noexcept;
 
 private:
     friend class Worker;
     TasksDispatcher();
     ~TasksDispatcher();
-    void insertTaskInfo(std::function<void()> &&wrappedTask, RestrictionType restrictionType, const QString &restrictor);
-    void addSignalWaiterPrivate(std::function<void(const QSharedPointer<QEventLoop> &)> &&connector);
-    bool eventLoopStarted() const;
-    void clearEventLoop();
+    void insertTaskInfo(std::function<void()> &&wrappedTask, RestrictionType restrictionType,
+                        const QString &restrictor) noexcept;
+    void addSignalWaiterPrivate(std::function<void(const QSharedPointer<QEventLoop> &)> &&connector) noexcept;
+    bool eventLoopStarted() const noexcept;
+    void clearEventLoop() noexcept;
 
     QScopedPointer<TasksDispatcherPrivate> d_ptr;
 };
 
 template <typename Task>
-auto run(Task &&task, RestrictionType restrictionType = RestrictionType::Custom, const QString &restrictor = QString())
+auto run(Task &&task, RestrictionType restrictionType = RestrictionType::Custom,
+         const QString &restrictor = QString()) noexcept
     -> decltype(TasksDispatcher::instance()->run(task, restrictionType, restrictor))
 {
     return TasksDispatcher::instance()->run(std::forward<Task>(task), restrictionType, restrictor);
 }
 
 template <typename Task>
-auto run(RestrictionType restrictionType, const QString &restrictor, Task &&task)
+auto run(RestrictionType restrictionType, const QString &restrictor, Task &&task) noexcept
     -> decltype(TasksDispatcher::instance()->run(task, restrictionType, restrictor))
 {
     return TasksDispatcher::instance()->run(std::forward<Task>(task), restrictionType, restrictor);
@@ -173,7 +197,8 @@ template <template <typename...> class Container, typename Input, typename Task,
           typename = typename std::enable_if_t<!std::is_same<Output, void>::value
                                                && !IsSpecialization<Output, QSharedPointer, Future>::value>>
 auto run(const Container<Input> &data, Task &&task, RestrictionType restrictionType = RestrictionType::Custom,
-         const QString &restrictor = QString()) -> decltype(task(*(data.cbegin())), FutureSP<Container<Output>>())
+         const QString &restrictor = QString()) noexcept
+    -> decltype(task(*(data.cbegin())), FutureSP<Container<Output>>())
 {
     if (!data.size())
         return Future<Container<Output>>::successful();
@@ -190,7 +215,8 @@ template <template <typename...> class Container, typename Input, typename Task,
           typename = typename std::enable_if_t<IsSpecialization<Output, QSharedPointer, Future>::value>,
           typename OutputValue = typename Output::Type::Value>
 auto run(const Container<Input> &data, Task &&task, RestrictionType restrictionType = RestrictionType::Custom,
-         const QString &restrictor = QString()) -> decltype(task(*(data.cbegin())), FutureSP<Container<OutputValue>>())
+         const QString &restrictor = QString()) noexcept
+    -> decltype(task(*(data.cbegin())), FutureSP<Container<OutputValue>>())
 {
     if (!data.size())
         return Future<Container<OutputValue>>::successful();
@@ -222,7 +248,8 @@ template <template <typename...> class Container, typename Input, typename Task,
           typename = typename std::enable_if_t<!std::is_same<Output, void>::value
                                                && !IsSpecialization<Output, QSharedPointer, Future>::value>>
 auto run(const Container<Input> &data, Task &&task, RestrictionType restrictionType = RestrictionType::Custom,
-         const QString &restrictor = QString()) -> decltype(task(0ll, *(data.cbegin())), FutureSP<Container<Output>>())
+         const QString &restrictor = QString()) noexcept
+    -> decltype(task(0ll, *(data.cbegin())), FutureSP<Container<Output>>())
 {
     if (!data.size())
         return Future<Container<Output>>::successful();
@@ -258,7 +285,7 @@ template <template <typename...> class Container, typename Input, typename Task,
           typename Output = typename std::result_of_t<Task(long long, Input)>,
           typename = typename std::enable_if_t<std::is_same<Output, void>::value>>
 auto run(const Container<Input> &data, Task &&task, RestrictionType restrictionType = RestrictionType::Custom,
-         const QString &restrictor = QString()) -> decltype(task(0ll, *(data.cbegin())), FutureSP<bool>())
+         const QString &restrictor = QString()) noexcept -> decltype(task(0ll, *(data.cbegin())), FutureSP<bool>())
 {
     if (!data.size())
         return Future<>::successful(true);
@@ -273,7 +300,7 @@ auto run(const Container<Input> &data, Task &&task, RestrictionType restrictionT
 template <template <typename...> class Container, typename Input, typename Task,
           typename Output = typename std::result_of_t<Task(Input)>>
 auto clusteredRun(const Container<Input> &data, Task &&task, qint64 minClusterSize = 1,
-                  RestrictionType restrictionType = RestrictionType::Custom, const QString &restrictor = QString())
+                  RestrictionType restrictionType = RestrictionType::Custom, const QString &restrictor = QString()) noexcept
     -> decltype((Container<Output>()).resize(data.count()), FutureSP<Container<Output>>())
 {
     if (!data.size())
@@ -310,12 +337,12 @@ auto clusteredRun(const Container<Input> &data, Task &&task, qint64 minClusterSi
 }
 
 template <typename SignalSender, typename SignalType, typename... Args>
-void addSignalWaiter(SignalSender *sender, SignalType signal, std::function<bool(Args...)> callback)
+void addSignalWaiter(SignalSender *sender, SignalType signal, std::function<bool(Args...)> callback) noexcept
 {
     TasksDispatcher::instance()->addSignalWaiter(sender, signal, callback);
 }
 
-inline void fireSignalWaiters()
+inline void fireSignalWaiters() noexcept
 {
     TasksDispatcher::instance()->fireSignalWaiters();
 }

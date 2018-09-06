@@ -31,27 +31,27 @@ namespace futures {
 namespace detail {
 static thread_local std::experimental::optional<Failure> m_lastFailure;
 
-bool hasLastFailure()
+bool hasLastFailure() noexcept
 {
     return m_lastFailure.has_value();
 }
 
-Failure lastFailure()
+Failure lastFailure() noexcept
 {
     return m_lastFailure.value_or(Failure());
 }
 
-void resetLastFailure()
+void resetLastFailure() noexcept
 {
     m_lastFailure.reset();
 }
 
-void setLastFailure(Proof::Failure &&failure)
+void setLastFailure(Proof::Failure &&failure) noexcept
 {
     m_lastFailure = std::move(failure);
 }
 
-void setLastFailure(const Proof::Failure &failure)
+void setLastFailure(const Proof::Failure &failure) noexcept
 {
     m_lastFailure = failure;
 }

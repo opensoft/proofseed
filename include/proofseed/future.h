@@ -62,18 +62,31 @@ struct Failure
         NoHint = 0x0,
         UserFriendlyHint = 0x1,
         CriticalHint = 0x2,
-        DataIsHttpCodeHint = 0x4
+        DataIsHttpCodeHint = 0x4,
+        FromExceptionHint = 0x8
     };
     Failure(const QString &message, long moduleCode, long errorCode, long hints = Failure::NoHint,
-            const QVariant &data = QVariant())
+            const QVariant &data = QVariant()) noexcept
         : exists(true), moduleCode(moduleCode), errorCode(errorCode), hints(hints), message(message), data(data)
     {}
-    explicit Failure(const QVariant &data) : exists(true), data(data) {}
-    Failure() : exists(false), moduleCode(0), errorCode(0), hints(NoHint) {}
-    operator QString() { return message; }
-    Failure withMessage(const QString &msg) const { return Failure(msg, moduleCode, errorCode, hints, data); }
-    Failure withCode(long module, long error) const { return Failure(message, module, error, hints, data); }
-    Failure withData(const QVariant &d) const { return Failure(message, moduleCode, errorCode, hints, d); }
+    explicit Failure(const QVariant &data) noexcept : exists(true), data(data) {}
+    Failure() noexcept : exists(false), moduleCode(0), errorCode(0), hints(NoHint) {}
+    Failure(Failure &&) noexcept = default;
+    Failure(const Failure &) = default;
+    Failure &operator=(Failure &&) noexcept = default;
+    Failure &operator=(const Failure &) = default;
+    operator QString() noexcept { return message; }
+    Failure withMessage(const QString &msg) const noexcept { return Failure(msg, moduleCode, errorCode, hints, data); }
+    Failure withCode(long module, long error) const noexcept { return Failure(message, module, error, hints, data); }
+    Failure withData(const QVariant &d) const noexcept { return Failure(message, moduleCode, errorCode, hints, d); }
+    static inline Failure fromException(const std::exception &e)
+    {
+        return Failure(QStringLiteral("Exception caught: %1").arg(e.what()), 0, 0, Failure::FromExceptionHint);
+    }
+    static inline Failure fromException()
+    {
+        return Failure(QStringLiteral("Exception caught"), 0, 0, Failure::FromExceptionHint);
+    }
     bool exists = false;
     long moduleCode = 0;
     long errorCode = 0;
@@ -106,11 +119,11 @@ struct Zipper<std::true_type, Left, Middle, Right, Tail...>
     using type = typename Zipper<std::true_type, typename Zipper<std::true_type, Left, Middle>::type, Right, Tail...>::type;
 };
 
-bool PROOF_SEED_EXPORT hasLastFailure();
-Failure PROOF_SEED_EXPORT lastFailure();
-void PROOF_SEED_EXPORT resetLastFailure();
-void PROOF_SEED_EXPORT setLastFailure(Failure &&failure);
-void PROOF_SEED_EXPORT setLastFailure(const Failure &failure);
+bool PROOF_SEED_EXPORT hasLastFailure() noexcept;
+Failure PROOF_SEED_EXPORT lastFailure() noexcept;
+void PROOF_SEED_EXPORT resetLastFailure() noexcept;
+void PROOF_SEED_EXPORT setLastFailure(Failure &&failure) noexcept;
+void PROOF_SEED_EXPORT setLastFailure(const Failure &failure) noexcept;
 } // namespace detail
 } // namespace futures
 
@@ -122,21 +135,21 @@ void PROOF_SEED_EXPORT setLastFailure(const Failure &failure);
 //Storing and/or casting to T/FutureSP<T> explicitly will lead to undefined behavior
 struct WithFailure
 {
-    explicit WithFailure(const Failure &f) { m_failure = f; }
-    explicit WithFailure(Failure &&f) { m_failure = std::move(f); }
+    explicit WithFailure(const Failure &f) noexcept { m_failure = f; }
+    explicit WithFailure(Failure &&f) noexcept { m_failure = std::move(f); }
     template <typename... Args>
-    explicit WithFailure(Args &&... args)
+    explicit WithFailure(Args &&... args) noexcept
     {
         m_failure = Failure(std::forward<Args>(args)...);
     }
     template <typename T>
-    operator T()
+    operator T() noexcept
     {
         futures::detail::setLastFailure(std::move(m_failure));
         return T();
     }
     template <typename T>
-    operator FutureSP<T>()
+    operator FutureSP<T>() noexcept
     {
         FutureSP<T> result = Future<T>::create();
         result->fillFailure(std::move(m_failure));
@@ -151,7 +164,7 @@ template <typename T>
 class Promise
 {
 public:
-    Promise() = default;
+    Promise() noexcept = default;
     Promise(const Promise<T> &) = delete;
     Promise(Promise<T> &&) = delete;
     Promise &operator=(const Promise<T> &) = delete;
@@ -160,10 +173,10 @@ public:
 
     FutureSP<T> future() const { return m_future; }
 
-    bool filled() { return m_future->completed(); }
-    void failure(const Failure &reason) { m_future->fillFailure(reason); }
-    void failure(Failure &&reason) { m_future->fillFailure(reason); }
-    void success(const T &result) { m_future->fillSuccess(result); }
+    bool filled() noexcept { return m_future->completed(); }
+    void failure(const Failure &reason) noexcept { m_future->fillFailure(reason); }
+    void failure(Failure &&reason) noexcept { m_future->fillFailure(reason); }
+    void success(const T &result) noexcept { m_future->fillSuccess(result); }
 
 private:
     FutureSP<T> m_future = Future<T>::create();
@@ -180,16 +193,20 @@ public:
     using Type = Future<T>;
     using element_type = Future<T>;
     using value_type = Future<T>;
-    explicit CancelableFuture() { m_promise = PromiseSP<T>::create(); }
-    explicit CancelableFuture(const PromiseSP<T> &promise) { m_promise = promise; }
-    void cancel(const Failure &failure = Failure(QStringLiteral("Canceled"), 0, 0)) const
+    explicit CancelableFuture() noexcept { m_promise = PromiseSP<T>::create(); }
+    explicit CancelableFuture(const PromiseSP<T> &promise) noexcept { m_promise = promise; }
+    CancelableFuture(CancelableFuture &&) noexcept = default;
+    CancelableFuture(const CancelableFuture &) noexcept = default;
+    CancelableFuture &operator=(CancelableFuture &&) noexcept = default;
+    CancelableFuture &operator=(const CancelableFuture &) noexcept = default;
+    void cancel(const Failure &failure = Failure(QStringLiteral("Canceled"), 0, 0)) const noexcept
     {
         if (!m_promise->filled())
             m_promise->failure(failure);
     }
-    Future<T> *operator->() const { return m_promise->future().data(); }
-    operator FutureSP<T>() const { return m_promise->future(); }
-    FutureSP<T> future() const { return m_promise->future(); }
+    Future<T> *operator->() const noexcept { return m_promise->future().data(); }
+    operator FutureSP<T>() const noexcept { return m_promise->future(); }
+    FutureSP<T> future() const noexcept { return m_promise->future(); }
 
 private:
     PromiseSP<T> m_promise;
@@ -212,15 +229,15 @@ public:
     Future &operator=(Future<T> &&) = delete;
     ~Future() = default;
 
-    bool completed() const
+    bool completed() const noexcept
     {
         int value = m_state.load(std::memory_order_acquire);
         return value == FailedFuture || value == SucceededFuture;
     }
-    bool failed() const { return m_state.load(std::memory_order_acquire) == FailedFuture; }
-    bool succeeded() const { return m_state.load(std::memory_order_acquire) == SucceededFuture; }
+    bool failed() const noexcept { return m_state.load(std::memory_order_acquire) == FailedFuture; }
+    bool succeeded() const noexcept { return m_state.load(std::memory_order_acquire) == SucceededFuture; }
 
-    bool wait(long long timeout = -1) const
+    bool wait(long long timeout = -1) const noexcept
     {
         auto self = m_weakSelf.toStrongRef();
         Q_ASSERT(self);
@@ -261,7 +278,7 @@ public:
         return completed();
     }
 
-    T result() const
+    T result() const noexcept
     {
         if (!completed())
             wait();
@@ -272,7 +289,7 @@ public:
         return T();
     }
 
-    Failure failureReason() const
+    Failure failureReason() const noexcept
     {
         while (!completed())
             QThread::yieldCurrentThread();
@@ -284,7 +301,7 @@ public:
     }
 
     template <typename Func>
-    auto onSuccess(Func &&f) -> decltype(f(T()), FutureSP<T>())
+    auto onSuccess(Func &&f) noexcept -> decltype(f(T()), FutureSP<T>())
     {
         bool callIt = false;
         m_mainLock.lock();
@@ -294,13 +311,17 @@ public:
             m_successCallbacks.emplace_back(f);
         m_mainLock.unlock();
 
-        if (callIt && succeeded())
-            f(m_result.value());
+        if (callIt && succeeded()) {
+            try {
+                f(m_result.value());
+            } catch (...) {
+            }
+        }
         return m_weakSelf.toStrongRef();
     }
 
     template <typename Func>
-    auto onFailure(Func &&f) -> decltype(f(Failure()), FutureSP<T>())
+    auto onFailure(Func &&f) noexcept -> decltype(f(Failure()), FutureSP<T>())
     {
         bool callIt = false;
         m_mainLock.lock();
@@ -310,70 +331,94 @@ public:
             m_failureCallbacks.emplace_back(f);
         m_mainLock.unlock();
 
-        if (callIt && failed())
-            f(failureReason());
+        if (callIt && failed()) {
+            try {
+                f(failureReason());
+            } catch (...) {
+            }
+        }
         return m_weakSelf.toStrongRef();
     }
 
     template <typename Func>
-    auto forEach(Func &&f) -> decltype(f(T()), FutureSP<T>())
+    auto forEach(Func &&f) noexcept -> decltype(f(T()), FutureSP<T>())
     {
         return onSuccess(std::forward<Func>(f));
     }
 
     template <typename Func>
-    auto filter(Func &&f, const Failure &rejected = Failure(QStringLiteral("Result wasn't good enough"), 0, 0))
+    auto filter(Func &&f, const Failure &rejected = Failure(QStringLiteral("Result wasn't good enough"), 0, 0)) noexcept
         -> decltype(!!f(T()), FutureSP<T>())
     {
         FutureSP<T> result = Future<T>::create();
-        onSuccess([result, f = std::forward<Func>(f), rejected](const T &v) {
-            if (f(v))
-                result->fillSuccess(v);
-            else
-                result->fillFailure(rejected);
+        onSuccess([result, f = std::forward<Func>(f), rejected](const T &v) noexcept {
+            try {
+                if (f(v))
+                    result->fillSuccess(v);
+                else
+                    result->fillFailure(rejected);
+            } catch (const std::exception &e) {
+                result->fillFailure(Failure::fromException(e));
+            } catch (...) {
+                result->fillFailure(Failure::fromException());
+            }
         });
-        onFailure([result](const Failure &failure) { result->fillFailure(failure); });
+        onFailure([result](const Failure &failure) noexcept { result->fillFailure(failure); });
         return result;
     }
 
     template <typename Func>
-    auto map(Func &&f) -> decltype(FutureSP<decltype(f(T()))>())
+    auto map(Func &&f) noexcept -> decltype(FutureSP<decltype(f(T()))>())
     {
         using U = decltype(f(T()));
         FutureSP<U> result = Future<U>::create();
-        onSuccess([result, f = std::forward<Func>(f)](const T &v) { result->fillSuccess(f(v)); });
-        onFailure([result](const Failure &failure) { result->fillFailure(failure); });
+        onSuccess([result, f = std::forward<Func>(f)](const T &v) noexcept {
+            try {
+                result->fillSuccess(f(v));
+            } catch (const std::exception &e) {
+                result->fillFailure(Failure::fromException(e));
+            } catch (...) {
+                result->fillFailure(Failure::fromException());
+            }
+        });
+        onFailure([result](const Failure &failure) noexcept { result->fillFailure(failure); });
         return result;
     }
 
     template <typename Func>
-    auto flatMap(Func &&f) -> decltype(FutureSP<decltype(f(T())->result())>())
+    auto flatMap(Func &&f) noexcept -> decltype(FutureSP<decltype(f(T())->result())>())
     {
         using U = decltype(f(T())->result());
         FutureSP<U> result = Future<U>::create();
-        onSuccess([result, f = std::forward<Func>(f)](const T &v) {
-            FutureSP<U> inner = f(v);
-            inner->onSuccess([result](const U &v) { result->fillSuccess(v); });
-            inner->onFailure([result](const Failure &failure) { result->fillFailure(failure); });
+        onSuccess([result, f = std::forward<Func>(f)](const T &v) noexcept {
+            try {
+                FutureSP<U> inner = f(v);
+                inner->onSuccess([result](const U &v) noexcept { result->fillSuccess(v); });
+                inner->onFailure([result](const Failure &failure) noexcept { result->fillFailure(failure); });
+            } catch (const std::exception &e) {
+                result->fillFailure(Failure::fromException(e));
+            } catch (...) {
+                result->fillFailure(Failure::fromException());
+            }
         });
-        onFailure([result](const Failure &failure) { result->fillFailure(failure); });
+        onFailure([result](const Failure &failure) noexcept { result->fillFailure(failure); });
         return result;
     }
 
     template <typename Func>
-    auto andThen(Func &&f) -> decltype(FutureSP<decltype(f()->result())>())
+    auto andThen(Func &&f) noexcept -> decltype(FutureSP<decltype(f()->result())>())
     {
         return flatMap([f = std::forward<Func>(f)](const T &) { return f(); });
     }
 
     template <typename T2, typename Result = typename std::decay<T2>::type>
-    FutureSP<Result> andThenValue(T2 &&value)
+    FutureSP<Result> andThenValue(T2 &&value) noexcept
     {
-        return map([value = std::forward<T2>(value)](const auto &) { return value; });
+        return map([value = std::forward<T2>(value)](const auto &) noexcept { return value; });
     }
 
     template <typename Func, typename Result>
-    auto innerReduce(Func &&f, Result acc) -> decltype(algorithms::reduce(T(), f, acc), FutureSP<Result>())
+    auto innerReduce(Func &&f, Result acc) noexcept -> decltype(algorithms::reduce(T(), f, acc), FutureSP<Result>())
     {
         return map([f = std::forward<Func>(f), acc = std::move(acc)](const T &v) {
             return algorithms::reduce(v, f, std::move(acc));
@@ -381,7 +426,7 @@ public:
     }
 
     template <typename Func, typename Result>
-    auto innerReduceByMutation(Func &&f, Result acc)
+    auto innerReduceByMutation(Func &&f, Result acc) noexcept
         -> decltype(algorithms::reduceByMutation(T(), f, acc), FutureSP<Result>())
     {
         return map([f = std::forward<Func>(f), acc = std::move(acc)](const T &v) {
@@ -390,7 +435,7 @@ public:
     }
 
     template <typename Func, typename Result>
-    auto innerMap(Func &&f, Result dest) -> decltype(algorithms::map(T(), f, dest), FutureSP<Result>())
+    auto innerMap(Func &&f, Result dest) noexcept -> decltype(algorithms::map(T(), f, dest), FutureSP<Result>())
     {
         return map([f = std::forward<Func>(f), dest = std::move(dest)](const T &v) {
             return algorithms::map(v, f, std::move(dest));
@@ -398,83 +443,97 @@ public:
     }
 
     template <typename Func>
-    auto innerMap(Func &&f) -> decltype(algorithms::map(T(), f), FutureSP<decltype(algorithms::map(T(), f))>())
+    auto innerMap(Func &&f) noexcept -> decltype(algorithms::map(T(), f), FutureSP<decltype(algorithms::map(T(), f))>())
     {
         return map([f = std::forward<Func>(f)](const T &v) { return algorithms::map(v, f); });
     }
 
     template <typename Func>
-    auto innerFilter(Func &&f) -> decltype(algorithms::filter(T(), f), FutureSP<T>())
+    auto innerFilter(Func &&f) noexcept -> decltype(algorithms::filter(T(), f), FutureSP<T>())
     {
         return map([f = std::forward<Func>(f)](const T &v) { return algorithms::filter(v, f); });
     }
 
     template <typename Result>
-    auto innerFlatten(Result acc) -> decltype(algorithms::flatten(T(), acc), FutureSP<Result>())
+    auto innerFlatten(Result acc) noexcept -> decltype(algorithms::flatten(T(), acc), FutureSP<Result>())
     {
         return map([acc = std::move(acc)](const T &v) { return algorithms::flatten(v, std::move(acc)); });
     }
 
     template <typename Dummy = void, typename = std::enable_if_t<NestingLevel<T>::value >= 2, Dummy>>
-    auto innerFlatten()
+    auto innerFlatten() noexcept
     {
         return map([](const T &v) { return algorithms::flatten(v); });
     }
 
     template <typename Func>
-    auto recover(Func &&f) -> decltype(f(Failure()), FutureSP<T>())
+    auto recover(Func &&f) noexcept -> decltype(f(Failure()), FutureSP<T>())
     {
         FutureSP<T> result = Future<T>::create();
-        onSuccess([result](const T &v) { result->fillSuccess(v); });
-        onFailure([result, f = std::forward<Func>(f)](const Failure &failure) { result->fillSuccess(f(failure)); });
+        onSuccess([result](const T &v) noexcept { result->fillSuccess(v); });
+        onFailure([result, f = std::forward<Func>(f)](const Failure &failure) noexcept {
+            try {
+                result->fillSuccess(f(failure));
+            } catch (const std::exception &e) {
+                result->fillFailure(Failure::fromException(e));
+            } catch (...) {
+                result->fillFailure(Failure::fromException());
+            }
+        });
         return result;
     }
 
     template <typename Func>
-    auto recoverWith(Func &&f) -> decltype(f(Failure())->result(), FutureSP<T>())
+    auto recoverWith(Func &&f) noexcept -> decltype(f(Failure())->result(), FutureSP<T>())
     {
         FutureSP<T> result = Future<T>::create();
-        onSuccess([result](const T &v) { result->fillSuccess(v); });
-        onFailure([result, f = std::forward<Func>(f)](const Failure &failure) {
-            FutureSP<T> inner = f(failure);
-            inner->onSuccess([result](const T &v) { result->fillSuccess(v); });
-            inner->onFailure([result](const Failure &failure) { result->fillFailure(failure); });
+        onSuccess([result](const T &v) noexcept { result->fillSuccess(v); });
+        onFailure([result, f = std::forward<Func>(f)](const Failure &failure) noexcept {
+            try {
+                FutureSP<T> inner = f(failure);
+                inner->onSuccess([result](const T &v) noexcept { result->fillSuccess(v); });
+                inner->onFailure([result](const Failure &failure) noexcept { result->fillFailure(failure); });
+            } catch (const std::exception &e) {
+                result->fillFailure(Failure::fromException(e));
+            } catch (...) {
+                result->fillFailure(Failure::fromException());
+            }
         });
         return result;
     }
 
     template <typename Head, typename... Other,
               typename Result = typename futures::detail::Zipper<std::true_type, FutureSP<T>, Head, Other...>::type>
-    FutureSP<Result> zip(Head head, Other... other)
+    FutureSP<Result> zip(Head head, Other... other) noexcept
     {
-        return flatMap([head, other...](const T &v) -> FutureSP<Result> {
-            return head->zip(other...)->map([v](const auto &argsResult) -> Result {
+        return flatMap([head, other...](const T &v) noexcept->FutureSP<Result> {
+            return head->zip(other...)->map([v](const auto &argsResult) noexcept->Result {
                 return std::tuple_cat(detail::TupleMaker<T>::result(v), argsResult);
             });
         });
     }
 
     template <typename T2, typename Result = typename futures::detail::Zipper<std::true_type, FutureSP<T>, FutureSP<T2>>::type>
-    FutureSP<Result> zipValue(const T2 &value)
+    FutureSP<Result> zipValue(const T2 &value) noexcept
     {
         return zip(Future<T2>::successful(value));
     }
 
-    static auto successful() -> decltype(T(), FutureSP<T>())
+    static auto successful() noexcept -> decltype(T(), FutureSP<T>())
     {
         FutureSP<T> result = create();
         result->fillSuccess(T());
         return result;
     }
 
-    static FutureSP<T> successful(const T &value)
+    static FutureSP<T> successful(const T &value) noexcept
     {
         FutureSP<T> result = create();
         result->fillSuccess(value);
         return result;
     }
 
-    static FutureSP<T> fail(const Failure &failure)
+    static FutureSP<T> fail(const Failure &failure) noexcept
     {
         FutureSP<T> result = create();
         result->fillFailure(failure);
@@ -482,7 +541,7 @@ public:
     }
 
     //This method was made non-template to restrict usage only to linear qt containers because of container copying
-    static FutureSP<QVector<T>> sequence(QVector<FutureSP<T>> container)
+    static FutureSP<QVector<T>> sequence(QVector<FutureSP<T>> container) noexcept
     {
         if (container.isEmpty())
             return Future<QVector<T>>::successful();
@@ -494,8 +553,8 @@ public:
     }
 
 private:
-    Future() = default;
-    static FutureSP<T> create()
+    Future() noexcept = default;
+    static FutureSP<T> create() noexcept
     {
         //in-place creation is a trade off for future creation restriction
         FutureSP<T> result(new Future<T>);
@@ -503,7 +562,7 @@ private:
         return result;
     }
 
-    void fillSuccess(const T &result)
+    void fillSuccess(const T &result) noexcept
     {
         if (futures::detail::hasLastFailure()) {
             auto failure = futures::detail::lastFailure();
@@ -524,11 +583,15 @@ private:
         std::swap(callbacks, m_successCallbacks);
         m_failureCallbacks.clear();
         m_mainLock.unlock();
-        for (const auto &f : callbacks)
-            f(result);
+        for (const auto &f : callbacks) {
+            try {
+                f(result);
+            } catch (...) {
+            }
+        }
     }
 
-    void fillFailure(const Failure &reason)
+    void fillFailure(const Failure &reason) noexcept
     {
         m_mainLock.lock();
         if (completed()) {
@@ -542,18 +605,22 @@ private:
         std::swap(callbacks, m_failureCallbacks);
         m_successCallbacks.clear();
         m_mainLock.unlock();
-        for (const auto &f : callbacks)
-            f(reason);
+        for (const auto &f : callbacks) {
+            try {
+                f(reason);
+            } catch (...) {
+            }
+        }
     }
 
-    auto zip() -> decltype(FutureSP<decltype(detail::TupleMaker<T>::result(T()))>())
+    auto zip() noexcept
     {
-        return map([](const T &v) { return detail::TupleMaker<T>::result(v); });
+        return map([](const T &v) noexcept { return detail::TupleMaker<T>::result(v); });
     }
 
     template <typename It, template <typename...> class Container>
     static void iterateSequence(Container<FutureSP<T>> &&initial, It current, Container<T> &&result,
-                                const PromiseSP<Container<T>> &promise)
+                                const PromiseSP<Container<T>> &promise) noexcept
     {
         while ((*current)->completed()) {
             if ((*current)->failed()) {
@@ -570,15 +637,16 @@ private:
         auto currentFuture = *current;
         currentFuture->onSuccess(
             sequenceSuccessListenerGenerator(std::move(initial), current, std::move(result), promise));
-        currentFuture->onFailure([promise](const Failure &reason) { promise->failure(reason); });
+        currentFuture->onFailure([promise](const Failure &reason) noexcept { promise->failure(reason); });
     }
 
     template <typename It, template <typename...> class Container>
-    static std::function<void(const T &)> sequenceSuccessListenerGenerator(Container<FutureSP<T>> &&initial, It current,
-                                                                           Container<T> &&result,
-                                                                           const PromiseSP<Container<T>> &promise)
+    static std::function<void(const T &)>
+    sequenceSuccessListenerGenerator(Container<FutureSP<T>> &&initial, It current, Container<T> &&result,
+                                     const PromiseSP<Container<T>> &promise) noexcept
     {
-        return [initial = std::move(initial), current, result = std::move(result), promise](const T &v) mutable {
+        return [initial = std::move(initial), current, result = std::move(result), promise](const T &v) mutable noexcept
+        {
             ++current;
             result << v;
             if (current == initial.cend())
@@ -617,13 +685,13 @@ public:
     ~Future() = delete;
 
     template <typename T>
-    static FutureSP<T> successful(const T &value)
+    static FutureSP<T> successful(const T &value) noexcept
     {
         return Future<T>::successful(value);
     }
 
     template <typename T>
-    static FutureSP<QVector<T>> sequence(const QVector<FutureSP<T>> &container)
+    static FutureSP<QVector<T>> sequence(const QVector<FutureSP<T>> &container) noexcept
     {
         return Future<T>::sequence(container);
     }

@@ -34,7 +34,7 @@ namespace Proof {
 class PROOF_SEED_EXPORT SpinLock
 {
 public:
-    SpinLock();
+    SpinLock() noexcept;
 
     void lock();
     bool tryLock();

@@ -31,7 +31,7 @@ static constexpr size_t ITERATIONS_COUNT = 64;
 
 namespace Proof {
 
-SpinLock::SpinLock()
+SpinLock::SpinLock() noexcept
 {}
 
 void SpinLock::lock()
