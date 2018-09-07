@@ -179,7 +179,7 @@ void TasksDispatcher::addCustomRestrictor(const QString &restrictor, qint32 capa
     d_ptr->mainLock.unlock();
 }
 
-void TasksDispatcher::fireSignalWaiters()
+void TasksDispatcher::fireSignalWaiters() noexcept
 {
     Q_ASSERT_X(d_ptr->poolThreads.count(QThread::currentThread()), "fireSignalWaiters",
                "signal waiters can't be used outside of tasks thread pool");
@@ -192,7 +192,7 @@ void TasksDispatcher::fireSignalWaiters()
 }
 
 void TasksDispatcher::insertTaskInfo(std::function<void()> &&wrappedTask, RestrictionType restrictionType,
-                                     const QString &restrictor)
+                                     const QString &restrictor) noexcept
 {
     d_ptr->mainLock.lock();
     //We mimic all intensive tasks as under single restrictor
@@ -202,7 +202,7 @@ void TasksDispatcher::insertTaskInfo(std::function<void()> &&wrappedTask, Restri
     d_ptr->mainLock.unlock();
 }
 
-void TasksDispatcher::addSignalWaiterPrivate(std::function<void(const QSharedPointer<QEventLoop> &)> &&connector)
+void TasksDispatcher::addSignalWaiterPrivate(std::function<void(const QSharedPointer<QEventLoop> &)> &&connector) noexcept
 {
     Q_ASSERT_X(d_ptr->poolThreads.count(QThread::currentThread()), "addSignalWaiterPrivate",
                "signal waiters can't be used outside of tasks thread pool");
@@ -213,12 +213,12 @@ void TasksDispatcher::addSignalWaiterPrivate(std::function<void(const QSharedPoi
     connector(d_ptr->signalWaitersEventLoop);
 }
 
-bool TasksDispatcher::eventLoopStarted() const
+bool TasksDispatcher::eventLoopStarted() const noexcept
 {
     return d_ptr->currentEventLoopStarted;
 }
 
-void TasksDispatcher::clearEventLoop()
+void TasksDispatcher::clearEventLoop() noexcept
 {
     d_ptr->signalWaitersEventLoop.clear();
     d_ptr->currentEventLoopStarted = false;

@@ -19,7 +19,8 @@ SOURCES += \
     tests/proofseed/future_test.cpp \
     tests/proofseed/tasks_test.cpp \
     tests/proofseed/algorithms_map_test.cpp \
-    tests/proofseed/algorithms_flatten_test.cpp
+    tests/proofseed/algorithms_flatten_test.cpp \
+    tests/proofseed/future_exceptions_test.cpp
 
 PROOF_PATH = $$(PROOF_PATH)
 !isEmpty(PROOF_PATH) {

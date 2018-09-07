@@ -6,6 +6,7 @@ ProofSeed Changelog
  * `Future::innerFlatten()` added
  * trait `NestingLevel` added
  * `sieve` method added for "sieving" tuple and keep only specified elements
+ * Future morphisms and tasks::run() are exception-safe now. If exception was thrown inside it will return failed Future with (hints&FromExceptionHint == true)
 
 #### Bug Fixing
  * Fix for possible crash on tasks scheduler destruction
