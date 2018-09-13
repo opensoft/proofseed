@@ -50,7 +50,7 @@ jobs:
       stage: Proof dependencies
       name: Linux proof modules downloading
       if: type != pull_request AND tag IS blank AND branch != master
-      script: $HOME/proof-bin/travis/proof-modules/pre-compile/raw-bin_download.sh debian9 proof-gtest
+      script: $HOME/proof-bin/dev-tools/travis/proof-modules/pre-compile/raw-bin_download.sh debian9 proof-gtest
     - <<: *pre-compile
       name: Android proof modules downloading
       language: android
@@ -59,19 +59,19 @@ jobs:
           - build-tools-25.0.2
       env: DUMMY=android
       if: type != pull_request AND tag IS blank AND branch != master
-      script: $HOME/proof-bin/travis/proof-modules/pre-compile/raw-bin_download.sh android proof-gtest
+      script: $HOME/proof-bin/dev-tools/travis/proof-modules/pre-compile/raw-bin_download.sh android proof-gtest
 
     - &compile
       stage: compilation and static checks
       name: Compilation (Debian9/clang/ccache)
       if: tag IS blank AND branch != master
-      script: $HOME/proof-bin/travis/proof-modules/compile/linux_compile.sh
+      script: $HOME/proof-bin/dev-tools/travis/proof-modules/compile/linux_compile.sh
     - <<: *compile
       name: Code style check with clang-format
-      script: $HOME/proof-bin/travis/proof-modules/compile/clang-format_check.sh
+      script: $HOME/proof-bin/dev-tools/travis/proof-modules/compile/clang-format_check.sh
     - <<: *compile
       name: Static code analysis with clazy
-      script: $HOME/proof-bin/travis/proof-modules/compile/clazy_check.sh
+      script: $HOME/proof-bin/dev-tools/travis/proof-modules/compile/clazy_check.sh
     - <<: *compile
       name: Compilation (Android27/gcc/ccache)
       language: android
@@ -84,18 +84,18 @@ jobs:
           - android-27
       env: DUMMY=android
       if: tag IS blank AND branch != master
-      script: $HOME/proof-bin/travis/proof-modules/compile/android_compile.sh
+      script: $HOME/proof-bin/dev-tools/travis/proof-modules/compile/android_compile.sh
 
     - &unit-tests
       stage: unit tests
       name: tests/ProofSeed
-      script: $HOME/proof-bin/travis/proof-modules/unit-tests/run_tests.sh seed
+      script: $HOME/proof-bin/dev-tools/travis/proof-modules/unit-tests/run_tests.sh seed
 
     - &post-compile
       stage: Post compilation
       name: Raw linux binary upload to S3
       if: type != pull_request AND tag IS blank AND branch != master
-      script: $HOME/proof-bin/travis/proof-modules/post-compile/raw-bin_upload.sh debian9
+      script: $HOME/proof-bin/dev-tools/travis/proof-modules/post-compile/raw-bin_upload.sh debian9
     - <<: *post-compile
       name: Raw android binary upload to S3
       language: android
@@ -104,10 +104,10 @@ jobs:
           - build-tools-25.0.2
       env: DUMMY=android
       if: type != pull_request AND tag IS blank AND branch != master
-      script: $HOME/proof-bin/travis/proof-modules/post-compile/raw-bin_upload.sh android
+      script: $HOME/proof-bin/dev-tools/travis/proof-modules/post-compile/raw-bin_upload.sh android
 
     - &ping-dependants
       stage: Dependants builds
       name: Build request for all modules based on current one
       if: type != pull_request AND tag IS blank AND branch != master
-      script: $HOME/proof-bin/travis/ping_dependants.sh "opensoft/proofbase"
+      script: $HOME/proof-bin/dev-tools/travis/ping_dependants.sh "opensoft/proofbase"
