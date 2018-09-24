@@ -89,6 +89,7 @@ jobs:
     - &unit-tests
       stage: unit tests
       name: tests/ProofSeed
+      if: tag IS blank AND branch != master
       script: $HOME/proof-bin/dev-tools/travis/proof-modules/unit-tests/run_tests.sh seed
 
     - &post-compile
