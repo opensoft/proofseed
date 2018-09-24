@@ -3,6 +3,13 @@ ProofSeed Changelog
 
 ## Not Released
 #### Features
+ * --
+
+#### Bug Fixing
+ * --
+
+## 0.18.9.23
+#### Features
  * `Future::innerFlatten()` added
  * trait `NestingLevel` added
  * `sieve` method added for "sieving" tuple and keep only specified elements
