@@ -50,7 +50,7 @@ jobs:
       stage: Proof dependencies
       name: Linux proof modules downloading
       if: type != pull_request AND tag IS blank AND branch != master
-      script: $HOME/proof-bin/dev-tools/travis/proof-modules/pre-compile/raw-bin_download.sh debian9 proof-gtest
+      script: $HOME/proof-bin/dev-tools/travis/proof-modules/pre-compile/raw-bin_download.sh debian9
     - <<: *pre-compile
       name: Android proof modules downloading
       language: android
@@ -59,7 +59,7 @@ jobs:
           - build-tools-25.0.2
       env: DUMMY=android
       if: type != pull_request AND tag IS blank AND branch != master
-      script: $HOME/proof-bin/dev-tools/travis/proof-modules/pre-compile/raw-bin_download.sh android proof-gtest
+      script: $HOME/proof-bin/dev-tools/travis/proof-modules/pre-compile/raw-bin_download.sh android
 
     - &compile
       stage: compilation and static checks
@@ -111,4 +111,4 @@ jobs:
       stage: Dependants builds
       name: Build request for all modules based on current one
       if: type != pull_request AND tag IS blank AND branch != master
-      script: $HOME/proof-bin/dev-tools/travis/ping_dependants.sh "opensoft/proofbase"
+      script: $HOME/proof-bin/dev-tools/travis/ping_dependants.sh

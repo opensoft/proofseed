@@ -1,0 +1,19 @@
+{
+    "name": "proofseeed",
+    "has_tests": true,
+    "has_plugins": false,
+    "has_tools": false,
+    "bootstrap": {
+        "process_3rdparty": true,
+        "process_qml": false,
+        "custom_steps": []
+    },
+    "depends": ["proof-gtest"],
+    "affects": ["proofbase"],
+    "libraries": [
+        {
+            "name": "ProofSeed",
+            "headers_subdir": "proofseed"
+        }
+    ]
+}
