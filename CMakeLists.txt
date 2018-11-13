@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.10.3)
+cmake_minimum_required(VERSION 3.12.0)
 if(NOT DEFINED PROOF_FULL_BUILD)
     list(APPEND CMAKE_MODULE_PATH "${CMAKE_INSTALL_PREFIX}/lib/cmake/modules")
     include(ProofInternal)
@@ -38,7 +38,7 @@ proof_add_module(Seed
 )
 
 # TODO: return seed tests back after switch to android (compilation on gcc takes almost forever. only future_test.cpp takes around half an hour on -j6 and 3.5GB RAM)
-if (NOT ${CMAKE_SYSTEM_NAME} STREQUAL "Android")
+if (NOT ANDROID)
     add_subdirectory(tests/proofseed)
 endif()
 

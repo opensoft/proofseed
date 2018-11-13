@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.10.3)
+cmake_minimum_required(VERSION 3.12.0)
 project(ProofSeedTest LANGUAGES CXX)
 
 proof_add_target_sources(seed_test
