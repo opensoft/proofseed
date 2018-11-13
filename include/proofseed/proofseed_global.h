@@ -29,7 +29,7 @@
 
 #include <QtGlobal>
 
-#ifdef PROOF_SEED_LIB
+#ifdef Proof_Seed_EXPORTS
 #    define PROOF_SEED_EXPORT Q_DECL_EXPORT
 #else
 #    define PROOF_SEED_EXPORT Q_DECL_IMPORT

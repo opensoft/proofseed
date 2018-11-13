@@ -4,7 +4,7 @@ CONFIG += qt c++14
 QT += core
 QT -= gui
 
-DEFINES += PROOF_SEED_LIB
+DEFINES += Proof_Seed_EXPORTS
 INCLUDEPATH += $$PWD include
 
 win32:CONFIG *= skip_target_version_ext

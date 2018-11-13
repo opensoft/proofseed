@@ -4,7 +4,7 @@
 #include "proofseed/proofalgorithms.h"
 #include "proofseed/tasks.h"
 
-#include "gtest/test_global.h"
+#include "gtest/proof/test_global.h"
 
 #include <QDateTime>
 #include <QPair>

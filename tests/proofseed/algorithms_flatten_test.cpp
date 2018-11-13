@@ -2,7 +2,7 @@
 
 #include "proofseed/proofalgorithms.h"
 
-#include "gtest/test_global.h"
+#include "gtest/proof/test_global.h"
 
 #include <QJsonArray>
 #include <QList>
