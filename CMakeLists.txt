@@ -1,14 +1,14 @@
 cmake_minimum_required(VERSION 3.12.0)
-if(NOT DEFINED PROOF_FULL_BUILD)
+if(NOT PROOF_FULL_BUILD)
     list(APPEND CMAKE_MODULE_PATH "${CMAKE_INSTALL_PREFIX}/lib/cmake/modules")
     include(ProofInternal)
-    proof_init()
 endif()
 
 project(ProofSeed VERSION ${PROOF_VERSION} LANGUAGES CXX)
 
 find_package(Qt5Core CONFIG REQUIRED)
-if(NOT DEFINED PROOF_FULL_BUILD)
+if(NOT PROOF_FULL_BUILD)
+    proof_init()
     find_package(proof-gtest CONFIG REQUIRED)
     enable_testing()
 endif()
