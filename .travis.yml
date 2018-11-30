@@ -1,14 +1,9 @@
 sudo: required
 dist: trusty
 language: cpp
+
 services:
   - docker
-
-cache:
-  directories:
-    - $HOME/builder_ccache
-    - $HOME/full_build
-    - $HOME/proof-bin
 
 env:
   global:
@@ -17,6 +12,12 @@ env:
     - secure: "nh3+cjD52qd9DHD15rr3oBtEw6v5zWnUefrUtY06ipr4KKnI/DyjVc/9zGu38odCIjTNKWDWPCJF2rJqprHvZeYEmq+UQCFPG5mL51nGW2r9ATMr9PPZg0M/jUwR9UXp3KgphC852g7r843b1XUMC+gSljuKlUQzuzMpoSfxa2DjGt2MsE40MEhrLe1GKRo/HsvN0FTpJpfkXVaLjU4MhNeFTzoHvIHXKGvDg+6FgDw/nfTih4zvm46KaFF6+o7JxZX8xNnawfV6kNRZt5AvtDYv44YZIgw+GarrYSIOBKuP02VNF5q71qWMEEdd9QKJotMSIw1StHc/TN2hf510dQcnKbJ3uDaIBYbXnY5R8l+hdgszN7fT1c0RsLoe2v6X7J2SsXt/KWRLNWZ6b3Q/lSdhgJ8FM4cV2HG9Eo7/w3eSjgoLvs4+SrpgNqUbZAc9Gy4gysQDVrhBq/TCggw1JgwIJu755YaG3esowAfnKNqyDl5eV5S28ws+q0s1WC75AAZ9sD+pJJXFikoUsrhpq7RAC8UGRamGGliTc10wnw0lvuxsol9VtDHI6e5e2iac0/4dqdO3DWR0t7/pNHaL+ivmMrXvAv0FT+50i7C4JvGoVDEaxbQn0xix491V4kKO7Bi3pzOnhbYxwuy1kCwKCUy4jeo3oOuzPYBlDtf2HSY="
     - secure: "aUGl1GvbDzS1N/+ZAHtxEHlskogSV0hKkHOhUI4XtLzsT/WHNH0MvqvGm9QmOtd34+hP1eas6XWZdnFWQ4mCX7OC420GQE7LU+iqnr9E5VeyraHTuzb65VgKhAcYH/Xgf+u4rg7PnW55dbdRzMwI3V5JThzX6goVG7X3WHOlUOBarU5iZ/qOCnBwTBoI+aOr3c7gENdWN4ap7zZjY+P7Bdl+fkE9ZXZguXvSQRFOrr9rDvbZAv8t86otBKeb69outqd+UY237ZBQzp6pq/hZoGs16s8dpBjgZ3h7zVKGTcKOIJwdXOegb8YmyCwIZVJgxyrZ3UxXY/F84tusiSlUS5Y1DCzw4PwhlWmTyZ5M/vkkBdeLm4N+vj2MwoUTSWDhROhsS3NQgfboecooAO/uAIJOlTpyJe43nAlilwM4zrJ7skYjeDryHa9VNQwSrS4JVdRbaNmGWMIOPZJOqSPm5N5kd+jFWvYfMs+2uhiWmcvnHIsXPvXbzTwGYG+3JDovuwAQKy4cg+HFDSf6XL3ydjkMUjvld2Xv8F81f6fhDf9CBL/vh7CbjbbGTAlljwj1jzMOJQRST9MQug7h+2wb01Lq4jHs7hjhs20yjMSN3sefPfecAuzVZInWVx6RzTHc7398HqLa8rC5jZXg0N5YBpLRGTPFO8eb3nVk8ehyIMU="
     - secure: "mDd2ky2Q4A8KXGifpRsYvkvArPCeFcdIYRgAYYYN3rKJ6xz9yALiLoVVNnJLxf8x2Pisc+aYHttcaADRQ6zdC/ADS3PZiyKW7mRRqny8i5KiVQ58FgHqS92UIGoGcutnbCj0pkt209WKPaWfbuMMTNMnWIMR2mMyraUjN9l6RMkow3D/MkWZrZEHVbShp240mcbYQ0laHvOlqRMUa7LBeX+hubsOlfMuULyHswQGK/FOKRPX0V0ekVSFyAT289bfeTKojzXWPSUvslCh09cg665RMaSAs4zMSrDx1FEDDUmE69yoi+ukp1a9KcrVk1VkRpSDR3rwmdTbo1Mn7R7YBr2EXYyBQH8CLlKwFcp/KCKFVkVewKW9pOccLhGxZf0rorqeTcYLxb2vRSgikeJy7pHOVYYqJjW7OUNYsKsR3S8yq7/ALivo5OfaeLOcYKLXdfOnVjdAAPHqhYNFIsrEokHZ6+BBEhwRLx+L6eiWY3NQ4X4Nf78KIzVt9nZTAsZtVjMsbMR4AD0bJOomMRyo8UZ32B1gY29RaTUoefoAFF9TMIIzwVQjFJqJU5fVuzSRSoqGOLNOijipYVlEj2omE+A7Erye0HOOUCbWBy9Vp35zPgId7sgp8GlsAZRDc6k//wtCzJEOv47va1RdCd9lMtPAa1tGi/ETvjNSBDSmhcU="
+
+cache:
+  directories:
+    - $HOME/builder_ccache
+    - $HOME/full_build
+    - $HOME/proof-bin
 
 before_install: export -f travis_fold && export -f travis_time_start && export -f travis_time_finish && export -f travis_nanoseconds
 script: echo "Nothing to do"
@@ -93,15 +94,15 @@ jobs:
       if: tag IS blank AND branch != master
       script: $HOME/proof-bin/dev-tools/travis/proof-modules/compile/abi_check.sh
     - <<: *compile
-      name: Compilation (Android27/gcc/ccache)
+      name: Compilation (Android28/gcc/ccache)
       language: android
       android:
         components:
           - tools
           - platform-tools
           - tools
-          - build-tools-27.0.3
-          - android-27
+          - build-tools-28.0.3
+          - android-28
       env: DUMMY=android
       if: tag IS blank AND branch != master
       script: $HOME/proof-bin/dev-tools/travis/proof-modules/compile/android_compile.sh
