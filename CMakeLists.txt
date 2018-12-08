@@ -37,8 +37,5 @@ proof_add_module(Seed
     OTHER_LIBS optional
 )
 
-# TODO: return seed tests back after switch to android (compilation on gcc takes almost forever. only future_test.cpp takes around half an hour on -j6 and 3.5GB RAM)
-if (NOT ANDROID)
-    add_subdirectory(tests/proofseed)
-endif()
+add_subdirectory(tests/proofseed)
 
