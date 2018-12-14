@@ -1,9 +1,0 @@
-include(proof_common.prf)
-include ($$(PROOF_PATH)/proof_functions.pri)
-add_proof_module_includes(proofseed)
-
-QT *= core
-
-LIBS *= -lProofSeed
-
-android:ANDROID_EXTRA_LIBS *= $$(PROOF_PATH)/lib/libProofSeed.so
