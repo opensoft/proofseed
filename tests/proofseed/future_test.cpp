@@ -895,6 +895,22 @@ TEST(FutureTest, recover)
     EXPECT_EQ(42, recoveredFuture->result());
 }
 
+TEST(FutureTest, recoverNoOp)
+{
+    PromiseSP<int> promise = PromiseSP<int>::create();
+    FutureSP<int> future = promise->future();
+    FutureSP<int> recoveredFuture = future->recover([](const Failure &) { return 42; });
+    EXPECT_FALSE(future->completed());
+    EXPECT_FALSE(recoveredFuture->completed());
+    promise->success(21);
+    ASSERT_TRUE(future->completed());
+    EXPECT_TRUE(future->succeeded());
+
+    ASSERT_TRUE(recoveredFuture->completed());
+    EXPECT_TRUE(recoveredFuture->succeeded());
+    EXPECT_EQ(21, recoveredFuture->result());
+}
+
 TEST(FutureTest, recoverFromWithFailure)
 {
     PromiseSP<int> promise = PromiseSP<int>::create();
@@ -964,6 +980,24 @@ TEST(FutureTest, recoverWith)
     EXPECT_EQ(42, recoveredFuture->result());
 }
 
+TEST(FutureTest, recoverWithNoOp)
+{
+    PromiseSP<int> promise = PromiseSP<int>::create();
+    PromiseSP<int> innerPromise = PromiseSP<int>::create();
+    FutureSP<int> future = promise->future();
+    FutureSP<int> recoveredFuture = future->recoverWith(
+        [innerPromise](const Failure &) { return innerPromise->future(); });
+    EXPECT_FALSE(future->completed());
+    EXPECT_FALSE(recoveredFuture->completed());
+    promise->success(21);
+    ASSERT_TRUE(future->completed());
+    EXPECT_TRUE(future->succeeded());
+
+    ASSERT_TRUE(recoveredFuture->completed());
+    EXPECT_TRUE(recoveredFuture->succeeded());
+    EXPECT_EQ(21, recoveredFuture->result());
+}
+
 TEST(FutureTest, recoverWithAndFail)
 {
     PromiseSP<int> promise = PromiseSP<int>::create();
@@ -987,6 +1021,42 @@ TEST(FutureTest, recoverWithAndFail)
     EXPECT_FALSE(recoveredFuture->succeeded());
     EXPECT_TRUE(recoveredFuture->failureReason().exists);
     EXPECT_EQ("failed2", recoveredFuture->failureReason().message);
+}
+
+TEST(FutureTest, recoverValue)
+{
+    PromiseSP<int> promise = PromiseSP<int>::create();
+    FutureSP<int> future = promise->future();
+    FutureSP<int> recoveredFuture = future->recoverValue(42);
+    EXPECT_FALSE(future->completed());
+    EXPECT_FALSE(recoveredFuture->completed());
+    promise->failure(Failure("failed", 1, 2, Failure::UserFriendlyHint, 5));
+    ASSERT_TRUE(future->completed());
+    EXPECT_FALSE(future->succeeded());
+    EXPECT_TRUE(future->failed());
+    EXPECT_TRUE(future->failureReason().exists);
+    EXPECT_EQ("failed", future->failureReason().message);
+
+    ASSERT_TRUE(recoveredFuture->completed());
+    EXPECT_TRUE(recoveredFuture->succeeded());
+    EXPECT_FALSE(recoveredFuture->failed());
+    EXPECT_EQ(42, recoveredFuture->result());
+}
+
+TEST(FutureTest, recoverValueNoOp)
+{
+    PromiseSP<int> promise = PromiseSP<int>::create();
+    FutureSP<int> future = promise->future();
+    FutureSP<int> recoveredFuture = future->recoverValue(42);
+    EXPECT_FALSE(future->completed());
+    EXPECT_FALSE(recoveredFuture->completed());
+    promise->success(21);
+    ASSERT_TRUE(future->completed());
+    EXPECT_TRUE(future->succeeded());
+
+    ASSERT_TRUE(recoveredFuture->completed());
+    EXPECT_TRUE(recoveredFuture->succeeded());
+    EXPECT_EQ(21, recoveredFuture->result());
 }
 
 TEST(FutureTest, zip)
