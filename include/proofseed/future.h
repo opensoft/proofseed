@@ -502,6 +502,11 @@ public:
         return result;
     }
 
+    FutureSP<T> recoverValue(T &&value) noexcept
+    {
+        return recover([value = std::forward<T>(value)](const Failure &) noexcept { return value; });
+    }
+
     template <typename Head, typename... Other,
               typename Result = typename futures::detail::Zipper<std::true_type, FutureSP<T>, Head, Other...>::type>
     FutureSP<Result> zip(Head head, Other... other) noexcept

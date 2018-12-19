@@ -3,7 +3,7 @@ ProofSeed Changelog
 
 ## Not Released
 #### Features
- * --
+ * Future::recoverValue()
 
 #### Bug Fixing
  * --
