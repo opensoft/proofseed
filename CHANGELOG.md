@@ -3,6 +3,13 @@ ProofSeed Changelog
 
 ## Not Released
 #### Features
+ * --
+
+#### Bug Fixing
+ * --
+
+## 0.18.12.24
+#### Features
  * Future::recoverValue()
 
 #### Bug Fixing
