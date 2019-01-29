@@ -68,6 +68,11 @@ jobs:
       env: DUMMY=abi
       script: $HOME/proof-bin/dev-tools/travis/proof-modules/pre-compile/raw-bin_download.sh debian9
     - <<: *pre-compile
+      name: Linux proof modules downloading for code coverage check
+      if: type != pull_request AND tag IS blank AND branch != master
+      env: DUMMY=codecov
+      script: $HOME/proof-bin/dev-tools/travis/proof-modules/pre-compile/raw-bin_download.sh debian9
+    - <<: *pre-compile
       name: Android proof modules downloading
       language: android
       android:
@@ -93,6 +98,11 @@ jobs:
       env: DUMMY=abi
       if: tag IS blank AND branch != master
       script: $HOME/proof-bin/dev-tools/travis/proof-modules/compile/abi_check.sh
+    - <<: *compile
+      name: Code coverage check
+      env: DUMMY=codecov
+      if: type != pull_request
+      script: $HOME/proof-bin/dev-tools/travis/proof-modules/compile/codecov_check.sh
     - <<: *compile
       name: Compilation (Android28/gcc/ccache)
       language: android
