@@ -44,6 +44,16 @@ jobs:
           aws s3 cp s3://proof.travis.builds/develop/raw-bin/proofboot-bin-debian9.tar.gz $HOME/proof-bin.tar.gz || travis_terminate 1
         - cd $HOME && sudo rm -rf proof-bin && tar -xzf proof-bin.tar.gz
     - <<: *proof-boot
+      stage: Proof boot
+      name: Linux proofboot downloading for code coverage check
+      if: type != pull_request AND tag IS blank AND branch != master
+      env: DUMMY=codecov
+      before_script: pip install --user awscli
+      script:
+        - aws s3 cp s3://proof.travis.builds/$TRAVIS_BRANCH/raw-bin/proofboot-bin-debian9.tar.gz $HOME/proof-bin.tar.gz ||
+          aws s3 cp s3://proof.travis.builds/develop/raw-bin/proofboot-bin-debian9.tar.gz $HOME/proof-bin.tar.gz || travis_terminate 1
+        - cd $HOME && sudo rm -rf proof-bin && tar -xzf proof-bin.tar.gz
+    - <<: *proof-boot
       name: Android proofboot downloading
       if: type != pull_request AND tag IS blank AND branch != master
       language: android
@@ -66,6 +76,11 @@ jobs:
       name: Linux proof modules downloading for API compatibility check
       if: type != pull_request AND tag IS blank AND branch != master
       env: DUMMY=abi
+      script: $HOME/proof-bin/dev-tools/travis/proof-modules/pre-compile/raw-bin_download.sh debian9
+    - <<: *pre-compile
+      name: Linux proof modules downloading for code coverage check
+      if: type != pull_request AND tag IS blank AND branch != master
+      env: DUMMY=codecov
       script: $HOME/proof-bin/dev-tools/travis/proof-modules/pre-compile/raw-bin_download.sh debian9
     - <<: *pre-compile
       name: Android proof modules downloading
@@ -93,6 +108,11 @@ jobs:
       env: DUMMY=abi
       if: tag IS blank AND branch != master
       script: $HOME/proof-bin/dev-tools/travis/proof-modules/compile/abi_check.sh
+    - <<: *compile
+      name: Code coverage check
+      env: DUMMY=codecov
+      if: tag IS blank AND branch != master
+      script: $HOME/proof-bin/dev-tools/travis/proof-modules/compile/codecov_check.sh
     - <<: *compile
       name: Compilation (Android28/gcc/ccache)
       language: android
