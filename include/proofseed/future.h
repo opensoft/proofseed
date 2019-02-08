@@ -65,17 +65,18 @@ struct Failure
         DataIsHttpCodeHint = 0x4,
         FromExceptionHint = 0x8
     };
-    Failure(const QString &message, long moduleCode, long errorCode, long hints = Failure::NoHint,
+    Failure(const QString &message, long moduleCode, long errorCode, unsigned long hints = Failure::NoHint,
             const QVariant &data = QVariant()) noexcept
         : exists(true), moduleCode(moduleCode), errorCode(errorCode), hints(hints), message(message), data(data)
     {}
     explicit Failure(const QVariant &data) noexcept : exists(true), data(data) {}
-    Failure() noexcept : exists(false), moduleCode(0), errorCode(0), hints(NoHint) {}
+    Failure() noexcept {}
     Failure(Failure &&) noexcept = default;
     Failure(const Failure &) = default;
+    ~Failure() = default;
     Failure &operator=(Failure &&) noexcept = default;
     Failure &operator=(const Failure &) = default;
-    operator QString() noexcept { return message; }
+    operator QString() noexcept { return message; } // NOLINT(google-explicit-constructor)
     Failure withMessage(const QString &msg) const noexcept { return Failure(msg, moduleCode, errorCode, hints, data); }
     Failure withCode(long module, long error) const noexcept { return Failure(message, module, error, hints, data); }
     Failure withData(const QVariant &d) const noexcept { return Failure(message, moduleCode, errorCode, hints, d); }
@@ -90,7 +91,7 @@ struct Failure
     bool exists = false;
     long moduleCode = 0;
     long errorCode = 0;
-    long hints = NoHint;
+    unsigned long hints = NoHint;
     QString message;
     QVariant data;
 };
@@ -143,13 +144,13 @@ struct WithFailure
         m_failure = Failure(std::forward<Args>(args)...);
     }
     template <typename T>
-    operator T() noexcept
+    operator T() noexcept // NOLINT(google-explicit-constructor)
     {
         futures::detail::setLastFailure(std::move(m_failure));
         return T();
     }
     template <typename T>
-    operator FutureSP<T>() noexcept
+    operator FutureSP<T>() noexcept // NOLINT(google-explicit-constructor)
     {
         FutureSP<T> result = Future<T>::create();
         result->fillFailure(std::move(m_failure));
@@ -199,13 +200,14 @@ public:
     CancelableFuture(const CancelableFuture &) noexcept = default;
     CancelableFuture &operator=(CancelableFuture &&) noexcept = default;
     CancelableFuture &operator=(const CancelableFuture &) noexcept = default;
+    ~CancelableFuture() = default;
     void cancel(const Failure &failure = Failure(QStringLiteral("Canceled"), 0, 0)) const noexcept
     {
         if (!m_promise->filled())
             m_promise->failure(failure);
     }
     Future<T> *operator->() const noexcept { return m_promise->future().data(); }
-    operator FutureSP<T>() const noexcept { return m_promise->future(); }
+    operator FutureSP<T>() const noexcept { return m_promise->future(); } // NOLINT(google-explicit-constructor)
     FutureSP<T> future() const noexcept { return m_promise->future(); }
 
 private:
@@ -278,7 +280,7 @@ public:
         return completed();
     }
 
-    T result() const noexcept
+    T result() const
     {
         if (!completed())
             wait();
@@ -289,10 +291,10 @@ public:
         return T();
     }
 
-    Failure failureReason() const noexcept
+    Failure failureReason() const
     {
         while (!completed())
-            QThread::yieldCurrentThread();
+            wait();
         if (failed()) {
             Q_ASSERT(m_failureReason.has_value());
             return m_failureReason.value();

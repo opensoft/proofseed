@@ -62,7 +62,7 @@ class Worker;
 class TasksDispatcherPrivate
 {
     Q_DECLARE_PUBLIC(TasksDispatcher)
-    TasksDispatcher *q_ptr;
+    TasksDispatcher *q_ptr = nullptr;
 
 public:
     void taskFinished(qint32 workerId, const TaskInfo &taskInfo);
@@ -93,7 +93,7 @@ class Worker : public QThread
 {
     Q_OBJECT
 public:
-    Worker(qint32 id);
+    explicit Worker(qint32 id);
     void setNextTask(const TaskInfo &task);
     void poisonPill();
 
@@ -153,7 +153,7 @@ qint32 TasksDispatcher::restrictorCapacity(RestrictionType restrictionType, cons
         return 1;
     if (restrictionType == RestrictionType::Intensive)
         return INTENSIVE_CAPACITY;
-    else if (restrictor.isEmpty())
+    if (restrictor.isEmpty())
         return capacity();
     d_ptr->mainLock.lock();
     auto resultIt = d_ptr->customRestrictorsCapacity.find(restrictor);

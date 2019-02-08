@@ -57,9 +57,9 @@ class PROOF_SEED_EXPORT TasksDispatcher
 public:
     static TasksDispatcher *instance();
     TasksDispatcher(const TasksDispatcher &) = delete;
-    TasksDispatcher(const TasksDispatcher &&) = delete;
-    TasksDispatcher operator=(const TasksDispatcher &) = delete;
-    TasksDispatcher operator=(const TasksDispatcher &&) = delete;
+    TasksDispatcher(TasksDispatcher &&) = delete;
+    TasksDispatcher &operator=(const TasksDispatcher &) = delete;
+    TasksDispatcher &operator=(TasksDispatcher &&) = delete;
 
     qint32 capacity() const;
     qint32 restrictorCapacity(RestrictionType restrictionType, const QString &restrictor = QString()) const;
