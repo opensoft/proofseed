@@ -1,5 +1,5 @@
 sudo: required
-dist: trusty
+dist: xenial
 language: cpp
 
 services:
@@ -56,6 +56,7 @@ jobs:
     - <<: *proof-boot
       name: Android proofboot downloading
       if: type != pull_request AND tag IS blank AND branch != master
+      dist: trusty
       language: android
       android:
         components:
@@ -84,6 +85,7 @@ jobs:
       script: $HOME/proof-bin/dev-tools/travis/proof-modules/pre-compile/raw-bin_download.sh debian9
     - <<: *pre-compile
       name: Android proof modules downloading
+      dist: trusty
       language: android
       android:
         components:
@@ -114,7 +116,8 @@ jobs:
       if: tag IS blank AND branch != master
       script: $HOME/proof-bin/dev-tools/travis/proof-modules/compile/codecov_check.sh
     - <<: *compile
-      name: Compilation (Android28/gcc/ccache)
+      name: Compilation (Android28/clang/ccache)
+      dist: trusty
       language: android
       android:
         components:
@@ -140,6 +143,7 @@ jobs:
       script: $HOME/proof-bin/dev-tools/travis/proof-modules/post-compile/raw-bin_upload.sh debian9
     - <<: *post-compile
       name: Raw android binary upload to S3
+      dist: trusty
       language: android
       android:
         components:
