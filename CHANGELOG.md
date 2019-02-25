@@ -3,7 +3,10 @@ ProofSeed Changelog
 
 ## Not Released
 #### Features
- * --
+ * Future, Promise and related classes replaced with 3rdparty asynqro
+ * type traits removed (use asynqro)
+ * SpinLock removed (use asynqro)
+ * tasks scheduling replaced with 3rdparty asynqro
 
 #### Bug Fixing
  * --

@@ -70,10 +70,12 @@ IncludeCategories:
       Priority: 6
     - Regex: '^("|<)proof.*/' # Proof headers
       Priority: 7
-    - Regex: '^("|<)3rdparty/' # 3rdparty headers
+    - Regex: '^("|<)asynqro/' # asynqro headers
       Priority: 11
+    - Regex: '^("|<)3rdparty/' # 3rdparty headers
+      Priority: 15
     - Regex: '^"gtest.*' # gtest headers
-      Priority: 12
+      Priority: 17
     - Regex: '^(<|")opencv.*' # opencv headers
       Priority: 45
     - Regex: '^<.*' # stl/system headers
