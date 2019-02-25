@@ -2,3 +2,7 @@
 	path = 3rdparty/optional
 	url = https://github.com/opensoft/Optional.git
 	branch = proofed
+[submodule "3rdparty/asynqro"]
+	path = 3rdparty/asynqro
+	url = git@github.com:opensoft/asynqro.git
+	branch = proofed
