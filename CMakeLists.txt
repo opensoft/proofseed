@@ -13,28 +13,29 @@ if(NOT PROOF_FULL_BUILD)
     enable_testing()
 endif()
 
-add_subdirectory(3rdparty/optional)
+set(ASYNQRO_QT_SUPPORT ON CACHE BOOL "Qt support in asynqro" FORCE)
+set(ASYNQRO_BUILD_TESTS OFF CACHE BOOL "Asynqro tests" FORCE)
+add_subdirectory(3rdparty/asynqro)
 
 proof_add_target_sources(Seed
-    src/proofseed/future.cpp
-    src/proofseed/spinlock.cpp
     src/proofseed/tasks.cpp
 )
 
 proof_add_target_headers(Seed
     include/proofseed/planting.h
     include/proofseed/proofalgorithms.h
-    include/proofseed/future.h
+    include/proofseed/asynqro_extra.h
     include/proofseed/proofseed_global.h
-    include/proofseed/spinlock.h
     include/proofseed/tasks.h
-    include/proofseed/helpers/prooftypetraits.h
-    include/proofseed/helpers/tuplemaker.h
 )
+
+if (PROOF_CLANG_TIDY)
+    proof_add_target_sources(Seed src/proofseed/dummy.cpp)
+endif()
 
 proof_add_module(Seed
     QT_LIBS Core
-    OTHER_LIBS optional
+    OTHER_LIBS asynqro::asynqro
 )
 
 add_subdirectory(tests/proofseed)

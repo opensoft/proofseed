@@ -1,4 +1,4 @@
-[submodule "3rdparty/optional"]
-	path = 3rdparty/optional
-	url = https://github.com/opensoft/Optional.git
+[submodule "3rdparty/asynqro"]
+	path = 3rdparty/asynqro
+	url = https://github.com/opensoft/asynqro.git
 	branch = proofed

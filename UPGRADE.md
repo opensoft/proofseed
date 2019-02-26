@@ -7,7 +7,10 @@ Changes that one must make to applications based on Proof between versions.
  * --
 
 #### API modifications/removals/deprecations
- * --
+ * Future, Promise and related classes replaced with 3rdparty asynqro
+ * type traits removed (use asynqro)
+ * SpinLock removed (use asynqro)
+ * tasks scheduling replaced with 3rdparty asynqro
 
 #### Config changes
  * --
