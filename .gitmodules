@@ -1,4 +1,4 @@
 [submodule "3rdparty/asynqro"]
 	path = 3rdparty/asynqro
-	url = git@github.com:opensoft/asynqro.git
+	url = https://github.com/opensoft/asynqro.git
 	branch = proofed
