@@ -29,6 +29,10 @@ proof_add_target_headers(Seed
     include/proofseed/tasks.h
 )
 
+if (PROOF_CLANG_TIDY)
+    proof_add_target_sources(Seed src/proofseed/dummy.cpp)
+endif()
+
 proof_add_module(Seed
     QT_LIBS Core
     OTHER_LIBS asynqro::asynqro
