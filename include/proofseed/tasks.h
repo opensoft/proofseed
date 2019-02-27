@@ -59,8 +59,11 @@ public:
                 QSharedPointer<QEventLoop> eventLoop = eventLoopWeak.toStrongRef();
                 if (!eventLoop)
                     return;
-                if (!callback(args...))
-                    return;
+                try {
+                    if (!callback(args...))
+                        return;
+                } catch (...) {
+                }
                 QObject::disconnect(*connection);
                 if (!eventLoopStarted())
                     clearEventLoop();
