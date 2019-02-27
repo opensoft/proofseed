@@ -49,11 +49,14 @@ void TasksExtra::fireSignalWaiters() noexcept
 
 void TasksExtra::addSignalWaiterPrivate(std::function<void(const QSharedPointer<QEventLoop> &)> &&connector) noexcept
 {
-    if (!signalWaitersEventLoop) {
-        currentEventLoopStarted = false;
-        signalWaitersEventLoop.reset(new QEventLoop);
+    try {
+        if (!signalWaitersEventLoop) {
+            currentEventLoopStarted = false;
+            signalWaitersEventLoop.reset(new QEventLoop);
+        }
+        connector(signalWaitersEventLoop);
+    } catch (...) {
     }
-    connector(signalWaitersEventLoop);
 }
 
 bool TasksExtra::eventLoopStarted() noexcept
