@@ -15,6 +15,7 @@ endif()
 
 set(ASYNQRO_QT_SUPPORT ON CACHE BOOL "Qt support in asynqro" FORCE)
 set(ASYNQRO_BUILD_TESTS OFF CACHE BOOL "Asynqro tests" FORCE)
+set(BUILD_SHARED_LIBS ON CACHE BOOL "Build shared libs (used only for asynqro, everything else is force-shared anyway)" FORCE)
 add_subdirectory(3rdparty/asynqro)
 
 proof_add_target_sources(Seed
