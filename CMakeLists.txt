@@ -40,4 +40,3 @@ proof_add_module(Seed
 )
 
 add_subdirectory(tests/proofseed)
-
