@@ -2,7 +2,21 @@ Upgrades
 ========
 Changes that one must make to applications based on Proof between versions.
 
+
 ## Not released
+#### IT issues
+ * --
+
+#### API modifications/removals/deprecations
+ * --
+
+#### Config changes
+ * --
+
+#### Migrations
+ * --
+
+## 0.19.4.2
 #### IT issues
  * --
 
