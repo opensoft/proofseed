@@ -110,9 +110,10 @@ TEST(AsynqroExtraTest, futuresSequenceLValue)
 
 TEST(AsynqroExtraTest, futuresSequenceWithFailuresRValue)
 {
-    Future<std::pair<QHash<unsigned long, int>, QHash<unsigned long, Failure>>> f = futures::sequenceWithFailures(
-        std::vector<Future<int>>{futures::successful(0), futures::successful(5), futures::successful(10),
-                                 futures::successful(15), futures::successful(20)});
+    Future<std::pair<QHash<std::vector<Future<int>>::size_type, int>, QHash<std::vector<Future<int>>::size_type, Failure>>>
+        f = futures::sequenceWithFailures(std::vector<Future<int>>{futures::successful(0), futures::successful(5),
+                                                                   futures::successful(10), futures::successful(15),
+                                                                   futures::successful(20)});
     ASSERT_TRUE(f.isCompleted());
     ASSERT_TRUE(f.isSucceeded());
     ASSERT_EQ(5, f.resultRef().first.size());
@@ -125,7 +126,8 @@ TEST(AsynqroExtraTest, futuresSequenceWithFailuresLValue)
 {
     std::vector<Future<int>> v{futures::successful(0), futures::successful(5), futures::successful(10),
                                futures::successful(15), futures::successful(20)};
-    Future<std::pair<QHash<unsigned long, int>, QHash<unsigned long, Failure>>> f = futures::sequenceWithFailures(v);
+    Future<std::pair<QHash<std::vector<Future<int>>::size_type, int>, QHash<std::vector<Future<int>>::size_type, Failure>>>
+        f = futures::sequenceWithFailures(v);
     ASSERT_TRUE(f.isCompleted());
     ASSERT_TRUE(f.isSucceeded());
     ASSERT_EQ(5, f.resultRef().first.size());
