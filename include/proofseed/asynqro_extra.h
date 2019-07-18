@@ -79,6 +79,16 @@ using WithFailure = asynqro::WithFailure<Failure>;
 using SpinLock = asynqro::detail::SpinLock;
 using SpinLockHolder = asynqro::detail::SpinLockHolder;
 
+using asynqro::RepeaterResult;
+template <typename T, typename... Args>
+using RepeaterFutureResult = asynqro::RepeaterFutureResult<RepeaterResult<T, Args...>, Failure>;
+
+namespace repeater {
+using asynqro::repeater::Continue;
+using asynqro::repeater::Finish;
+using asynqro::repeater::TrampolinedContinue;
+} // namespace repeater
+
 namespace futures {
 template <typename T>
 auto successful(T &&value) noexcept
@@ -104,6 +114,42 @@ template <typename T, template <typename...> typename F, template <typename...> 
 Proof::Future<Container<T>> sequence(Container<F<T, Proof::Failure>, Fs...> &&container) noexcept
 {
     return Proof::Future<T>::sequence(std::move(container));
+}
+
+// This overload copies container to make sure that it will be reachable in future
+template <template <typename...> typename ResultContainer = QHash, typename Container,
+          typename F = typename Container::value_type, typename T = typename F::Value>
+auto sequenceWithFailures(const Container &container) noexcept
+{
+    Container copy = container;
+    return Proof::Future<T>::template sequenceWithFailures<ResultContainer>(std::move(copy));
+}
+
+template <template <typename...> typename ResultContainer = QHash, typename Container,
+          typename F = typename Container::value_type, typename T = typename F::Value>
+auto sequenceWithFailures(Container &&container) noexcept
+{
+    return Proof::Future<T>::template sequenceWithFailures<ResultContainer>(std::forward<Container>(container));
+}
+
+template <typename T, typename Func, typename... Args>
+Proof::Future<T> repeat(Func &&f, Args &&... args) noexcept
+{
+    return asynqro::repeat<T, Proof::Failure>(std::forward<Func>(f), std::forward<Args>(args)...);
+}
+
+// This overload copies container to make sure that it will be reachable in future
+template <typename T, typename Data, template <typename...> typename Container, typename... Ds, typename Func>
+auto repeatForSequence(const Container<Data, Ds...> &data, T &&initial, Func &&f) noexcept
+{
+    Container<Data> copy(data);
+    return asynqro::repeatForSequence<T>(std::move(copy), std::forward<T>(initial), std::forward<Func>(f));
+}
+
+template <typename T, typename Data, template <typename...> typename Container, typename... Ds, typename Func>
+auto repeatForSequence(Container<Data, Ds...> &&data, T &&initial, Func &&f) noexcept
+{
+    return asynqro::repeatForSequence<T>(std::move(data), std::forward<T>(initial), std::forward<Func>(f));
 }
 } // namespace futures
 

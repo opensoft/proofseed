@@ -39,6 +39,13 @@ using Proof::CancelableFuture;
 using Proof::Failure;
 using Proof::Future;
 using Proof::Promise;
+using Proof::RepeaterFutureResult;
+using Proof::RepeaterResult;
+using Proof::SpinLock;
+using Proof::SpinLockHolder;
 using Proof::WithFailure;
+using Proof::repeater::Continue;
+using Proof::repeater::Finish;
+using Proof::repeater::TrampolinedContinue;
 
 #endif // PROOFSEED_PLANTING_H
